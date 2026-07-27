@@ -5,6 +5,7 @@ import Topbar from './components/Topbar'
 import Dashboard from './pages/Dashboard'
 import Bookings from './pages/Bookings'
 import Nurses from './pages/Nurses'
+import Services from './pages/Services'
 import Help from './pages/Help'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
@@ -33,8 +34,9 @@ function App() {
                       <Route path="/" element={<Navigate to="/dashboard" replace />} />
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/bookings" element={<Bookings />} />
-                      <Route path="/nurses" element={<Nurses />} />
-                      <Route path="/help" element={<Help />} />
+                        <Route path="/nurses" element={<Nurses />} />
+                        <Route path="/services" element={<Services />} />
+                        <Route path="/help" element={<Help />} />
                       <Route path="*" element={
                         <div className="flex flex-col items-center justify-center h-64">
                           <h1 className="text-4xl font-bold text-dark-400">404</h1>

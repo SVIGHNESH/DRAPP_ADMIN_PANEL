@@ -2,7 +2,7 @@ services:
   - type: web
     name: hospital-care-admin
     runtime: static
-    repo: https://github.com/akankshathakur7253-gif/hospital-care-admin.git
+    repo: https://github.com/SVIGHNESH/DRAPP_ADMIN_PANEL.git
     branch: main
     buildCommand: npm install && npm run build
     staticPublishPath: dist
