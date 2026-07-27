@@ -1,11 +1,16 @@
-import api from "./api";
+import api from "./api"
 
-export const getBookings = () => api.get("/bookings");
+export const getBookings = () => api.get("/bookings")
 
-export const getBooking = (id) => api.get(`/bookings/${id}`);
+export const getBooking = (id) => api.get(`/bookings/${id}`)
 
-export const updateBooking = (id, data) =>
-  api.put(`/bookings/${id}`, data);
+export const createBooking = (data) => api.post("/bookings", data)
 
-export const deleteBooking = (id) =>
-  api.delete(`/bookings/${id}`);
+export const confirmBooking = (id, data) =>
+  api.patch(`/bookings/${id}/confirm`, data)
+
+export const updateBookingStatus = (id, status) =>
+  api.patch(`/bookings/${id}/status`, { status })
+
+export const addBookingNote = (id, message) =>
+  api.post(`/bookings/${id}/notes`, { message })

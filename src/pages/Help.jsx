@@ -75,7 +75,7 @@ const Help = () => {
       <div>
         <h1 className="page-title">Help & Support</h1>
         <p className="text-dark-500 mt-1">
-          We're here to help you anytime
+We are here to help you anytime
         </p>
       </div>
 
