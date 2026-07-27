@@ -95,7 +95,7 @@ const Help = () => {
             href="tel:+919045954986"
             className="text-2xl font-bold text-accent-cyan hover:underline"
           >
-            +91 12345 67890
+            +919045954986
           </a>
 
           <p className="text-xs text-dark-500 mt-2">
@@ -118,7 +118,7 @@ const Help = () => {
             href="mailto:drhospital@rbmi.in"
             className="text-lg font-semibold text-accent-teal hover:underline"
           >
-            support@carenest.app
+            drhospital@rbmi.in
           </a>
         </div>
       </div>
