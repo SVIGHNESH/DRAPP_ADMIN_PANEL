@@ -75,7 +75,7 @@ const Help = () => {
       <div>
         <h1 className="page-title">Help & Support</h1>
         <p className="text-dark-500 mt-1">
-We are here to help you anytime
+          We are here to help you anytime
         </p>
       </div>
 
@@ -92,7 +92,7 @@ We are here to help you anytime
           </p>
 
           <a
-            href="tel:+911234567890"
+            href="tel:+919045954986"
             className="text-2xl font-bold text-accent-cyan hover:underline"
           >
             +91 12345 67890
@@ -115,7 +115,7 @@ We are here to help you anytime
           </p>
 
           <a
-            href="mailto:support@carenest.app"
+            href="mailto:drhospital@rbmi.in"
             className="text-lg font-semibold text-accent-teal hover:underline"
           >
             support@carenest.app
