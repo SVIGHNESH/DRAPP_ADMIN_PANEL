@@ -1,11 +1,11 @@
 services:
-  - type: static
+  - type: web
     name: hospital-care-admin
-    runtime: node
+    runtime: static
     repo: https://github.com/akankshathakur7253-gif/hospital-care-admin.git
     branch: main
     buildCommand: npm install && npm run build
-    publishPath: dist
+    staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
         value: https://dr-backend-evhe.onrender.com/api
