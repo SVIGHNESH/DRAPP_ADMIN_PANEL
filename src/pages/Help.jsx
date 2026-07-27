@@ -92,14 +92,13 @@ const Help = () => {
           </p>
 
           <a
-            href="tel:+919045954986"
+            href="tel:+919690647600"
             className="text-2xl font-bold text-accent-cyan hover:underline"
           >
-            +919045954986
+            +919690647600
           </a>
 
           <p className="text-xs text-dark-500 mt-2">
-            Replace this with your actual support number
           </p>
         </div>
 
@@ -115,10 +114,11 @@ const Help = () => {
           </p>
 
           <a
-            href="mailto:drhospital@rbmi.in"
+            href="mailto:rbcetsdc@rbmi.in
+"
             className="text-lg font-semibold text-accent-teal hover:underline"
           >
-            drhospital@rbmi.in
+            rbcetsdc@rbmi.in
           </a>
         </div>
       </div>
