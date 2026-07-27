@@ -1,21 +1,76 @@
-import React, { useState } from 'react'
+// import React, { useState } from 'react'
 import { Search, Plus, Filter, FileText, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react'
 import { usersData, getStatusColor } from '../data/mockData'
+import React, { useState } from "react";
+import { useEffect } from "react";
+import toast from "react-hot-toast";
 
+import Loader from "../components/Loader";
+import ErrorState from "../components/ErrorState";
+import EmptyState from "../components/EmptyState";
 const Users = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [users, setUsers] = useState([]);
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState(null);
 
-  const filtered = usersData.filter(u => {
-    const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || u.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+const loadUsers = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Fake backend data
+    setUsers(usersData);
+
+  } catch (err) {
+    console.error(err);
+    setError("Unable to load users.");
+    toast.error("Unable to load users.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+  loadUsers();
+}, []);
+
+  // const filtered = usersData.filter(u => {
+  //   const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase())
+  //   const matchesStatus = statusFilter === 'all' || u.status === statusFilter
+  //   return matchesSearch && matchesStatus
+  // })
+
+  const filtered = users.filter((u) => {
+  const matchesSearch = u.name
+    .toLowerCase()
+    .includes(searchQuery.toLowerCase());
+
+  const matchesStatus =
+    statusFilter === "all" || u.status === statusFilter;
+
+  return matchesSearch && matchesStatus;
+});
 
   const itemsPerPage = 5
   const totalPages = Math.ceil(filtered.length / itemsPerPage)
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+  if (loading) {
+  return <Loader />;
+}
+ if (error) {
+  return (
+    <ErrorState
+      message={error}
+      onRetry={loadUsers}
+    />
+  );
+}
 
   return (
     <div className="space-y-6">
@@ -30,16 +85,16 @@ const Users = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500" size={18} />
             <input type="text" placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="input-field pl-10" />
           </div>
-          <div className="flex items-center gap-3">
+           <div className="flex items-center gap-3">
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="input-field w-40">
               <option value="all">All Status</option>
               <option value="stable">Stable</option>
               <option value="critical">Critical</option>
               <option value="observation">Observation</option>
             </select>
-            <button className="btn-secondary flex items-center gap-2"><Filter size={16} /> Filter</button>
+            {/* <button className="btn-secondary flex items-center gap-2"><Filter size={16} /> Filter</button> */}
           </div>
-        </div>
+        </div> 
 
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -47,16 +102,24 @@ const Users = () => {
               <tr className="border-b border-dark-700">
                 <th className="table-header">User</th>
                 <th className="table-header">Age/Gender</th>
-                <th className="table-header">Blood Type</th>
+                {/* <th className="table-header">Blood Type</th> */}
                 <th className="table-header">Care Needed</th>
                 <th className="table-header">Address</th>
                 <th className="table-header">Nurse</th>
                 <th className="table-header">Status</th>
-                <th className="table-header">Actions</th>
+                {/* <th className="table-header">Actions</th> */}
               </tr>
             </thead>
             <tbody>
-              {paginated.map((u) => (
+               {/* {paginated.map((u) => ( */}
+               {paginated.length === 0 ? (
+  <tr>
+    <td colSpan="8">
+      <EmptyState message="No users available." />
+    </td>
+  </tr>
+) : (
+  paginated.map((u)  => (
                 <tr key={u.id} className="border-b border-dark-700/50 hover:bg-dark-800/30">
                   <td className="table-cell">
                     <div className="flex items-center gap-3">
@@ -65,19 +128,20 @@ const Users = () => {
                     </div>
                   </td>
                   <td className="table-cell text-dark-300">{u.age} / {u.gender}</td>
-                  <td className="table-cell"><span className="badge bg-cyan-500/15 text-cyan-400">{u.bloodType}</span></td>
+                  {/* <td className="table-cell"><span className="badge bg-cyan-500/15 text-cyan-400">{u.bloodType}</span></td> */}
                   <td className="table-cell text-dark-400">{u.careNeeded}</td>
                   <td className="table-cell text-dark-300">{u.address}</td>
                   <td className="table-cell text-dark-400">{u.nurse}</td>
                   <td className="table-cell"><span className={`badge ${getStatusColor(u.status)}`}>{u.status}</span></td>
-                  <td className="table-cell">
+                  {/* <td className="table-cell">
                     <div className="flex items-center gap-2">
                       <button className="p-2 rounded-lg hover:bg-dark-700 text-dark-400"><FileText size={16} /></button>
                       <button className="p-2 rounded-lg hover:bg-dark-700 text-dark-400"><MoreHorizontal size={16} /></button>
                     </div>
-                  </td>
+                  </td> */}
                 </tr>
-              ))}
+  ))
+            )}
             </tbody>
           </table>
         </div>

@@ -1,11 +1,26 @@
-import React, { useState } from 'react'
+// import React, { useState } from 'react'
+import React, { useState, useEffect } from "react";
 import { Search, Filter, Plus, Calendar, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { bookingsData as initialBookings, nursesData, getStatusColor } from '../data/mockData'
+
+import toast from "react-hot-toast";
+
+import Loader from "../components/Loader";
+import ErrorState from "../components/ErrorState";
+import EmptyState from "../components/EmptyState";
+
+// Future API
+import { getBookings } from "../api/bookings";
 
 const emptyForm = { userName: '', nurse: '', careType: '', date: '', time: '', type: '', address: '' }
 
 const Bookings = () => {
-  const [bookings, setBookings] = useState(initialBookings)
+  // const [bookings, setBookings] = useState(initialBookings)
+  const [bookings, setBookings] = useState([]);
+
+const [loading, setLoading] = useState(false);
+
+const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
@@ -21,6 +36,31 @@ const Bookings = () => {
   const itemsPerPage = 5
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+  const loadBookings = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Backend Ready
+    // const response = await getBookings();
+    // setBookings(response.data);
+
+    setBookings(initialBookings);
+
+  } catch (err) {
+    console.error(err);
+    setError("Bookings data is not available.");
+    toast.error("Unable to load bookings.");
+  } finally {
+    setLoading(false);
+  }
+};
+useEffect(() => {
+  loadBookings();
+}, []);
 
   const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
 
@@ -47,6 +87,18 @@ const Bookings = () => {
     setCurrentPage(1)
   }
 
+  if (loading) {
+  return <Loader />;
+}
+if (error) {
+  return (
+    <ErrorState
+      message={error}
+      onRetry={loadBookings}
+    />
+  );
+}
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -69,7 +121,7 @@ const Bookings = () => {
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
-            <button className="btn-secondary flex items-center gap-2"><Filter size={16} /> Filter</button>
+            {/* <button className="btn-secondary flex items-center gap-2"><Filter size={16} /> Filter</button> */}
           </div>
         </div>
 
@@ -104,9 +156,19 @@ const Bookings = () => {
                   <td className="table-cell"><span className={`badge ${getStatusColor(b.status)}`}>{b.status}</span></td>
                 </tr>
               ))}
-              {paginated.length === 0 && (
-                <tr><td colSpan="6" className="table-cell text-center text-dark-500 py-8">No bookings found.</td></tr>
-              )}
+              {paginated.length === 0 ? (
+  <tr>
+    <td colSpan="6">
+      <EmptyState message="Bookings data is not available." />
+    </td>
+  </tr>
+) : (
+  paginated.map((b) => (
+    <tr key={b.id} className="border-b border-dark-700/50 hover:bg-dark-800/30">
+      ...
+    </tr>
+  ))
+)}
             </tbody>
           </table>
         </div>

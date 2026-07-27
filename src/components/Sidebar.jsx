@@ -2,14 +2,15 @@ import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { 
   ChevronLeft, ChevronRight, Heart, Menu, X, LayoutDashboard,
-  Calendar, UserRound, Stethoscope, Activity,
-  HelpCircle, Settings, ChevronRight as ChevronRightIcon
+  Calendar, UserRound, Stethoscope,Activity,
+  HelpCircle ,LogOut, ChevronRight as ChevronRightIcon
 } from 'lucide-react'
 import { sidebarLinks, sidebarReports, sidebarSettings } from '../data/mockData'
 
+
 const iconMap = {
   LayoutDashboard, Calendar, UserRound, Stethoscope,
-  Activity, HelpCircle, Settings
+  Activity, HelpCircle
 }
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
@@ -55,7 +56,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             </div>
           </div>
 
-          <div>
+          {/* <div>
             {isOpen && <p className="px-4 text-xs font-semibold text-dark-500 uppercase mb-3">Reports</p>}
             <div className="space-y-1">
               {sidebarReports.map((link) => {
@@ -85,11 +86,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 )
               })}
             </div>
-          </div>
+          </div> */}
         </nav>
 
         {/* Bottom */}
-        <div className={`p-4 border-t border-dark-700 ${isOpen ? '' : 'flex justify-center'}`}>
+        {/* <div className={`p-4 border-t border-dark-700 ${isOpen ? '' : 'flex justify-center'}`}>
           <div className={`flex items-center gap-3 ${isOpen ? '' : 'flex-col'}`}>
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-cyan to-accent-teal flex items-center justify-center text-dark-900 font-bold text-sm">AD</div>
             {isOpen && (
@@ -99,7 +100,15 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               </div>
             )}
           </div>
-        </div>
+        </div> */}
+{/* Bottom */}
+<div className="p-4 border-t border-dark-700">
+  <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-500/10 transition">
+    <LogOut size={20} />
+    {isOpen && <span className="font-medium">Sign Out</span>}
+  </button>
+</div>
+
       </aside>
 
       <button onClick={() => setIsOpen(!isOpen)} className="fixed top-4 left-4 z-50 lg:hidden p-2 bg-dark-800 rounded-lg border border-dark-700 text-dark-200">

@@ -1,7 +1,7 @@
 export const statsData = [
   { id: 1, title: 'Total Users', value: '2,500+', change: '+10.4%', icon: 'Users', gradient: 'from-cyan-400 to-cyan-600', desc: 'Last Month' },
   { id: 2, title: 'Total Booking', value: '250+', change: '+8.6%', icon: 'Calendar', gradient: 'from-amber-400 to-amber-600', desc: 'Last Month' },
-  { id: 3, title: 'Total Revenue', value: '$12,928', change: '+20.6%', icon: 'DollarSign', gradient: 'from-violet-400 to-violet-600', desc: 'Last Month' },
+  { id: 3, title: 'Total Revenue', value: '₹12,928', change: '+20.6%', icon: 'DollarSign', gradient: 'from-violet-400 to-violet-600', desc: 'Last Month' },
 ]
 
 export const expenseData = [
@@ -66,14 +66,16 @@ export const sidebarLinks = [
   { name: 'Nurses', path: '/nurses', icon: 'Stethoscope' },
 ]
 
-export const sidebarReports = [
-  { name: 'Analytics', path: '/analytics', icon: 'Activity' },
-]
+// export const sidebarReports = []
+export const sidebarReports = [];
 
 export const sidebarSettings = [
-  { name: 'Help & Supports', path: '/help', icon: 'HelpCircle' },
-  { name: 'Settings', path: '/settings', icon: 'Settings' },
-]
+  {
+    name: "Help & Supports",
+    path: "/help",
+    icon: "HelpCircle",
+  },
+];
 
 export const getStatusColor = (status) => {
   const colors = {

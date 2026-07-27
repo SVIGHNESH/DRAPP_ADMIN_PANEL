@@ -1,8 +1,19 @@
 import React, { useState } from 'react'
 import { ChevronRight, Plus, Stethoscope, Activity, X, Calendar as CalendarIcon, Clock } from 'lucide-react'
-import { statsData, calendarDays as initialCalendarDays, upcomingSchedule as initialSchedule, nursesData } from '../data/mockData'
+import {
+  statsData,
+  calendarDays as initialCalendarDays,
+  upcomingSchedule as initialSchedule,
+  nursesData
+} from "../data/mockData";
 import StatCard from '../components/StatCard'
 import { ExpenseChart } from '../components/Charts'
+import toast from "react-hot-toast";
+import { useEffect } from "react";
+import { getDashboard } from "../api/dashboard";
+import Loader from "../components/Loader";
+import ErrorState from "../components/ErrorState";
+import EmptyState from "../components/EmptyState";
 
 const emptyForm = { title: '', nurse: '', user: '', date: '', time: '' }
 
@@ -11,10 +22,53 @@ const Dashboard = () => {
   const [schedule, setSchedule] = useState(initialSchedule)
   const [showAddModal, setShowAddModal] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState(statsData);
 
   const selectDay = (index) => {
     setCalendarDays(prev => prev.map((day, i) => ({ ...day, active: i === index })))
   }
+
+  const loadDashboard = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+
+    const loadDashboard = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+
+    // Fake loading
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    setStats(statsData);
+    setSchedule(initialSchedule);
+
+  } catch (err) {
+    setError("Unable to load dashboard.");
+    toast.error("Unable to load dashboard.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+  } catch (err) {
+    console.error(err);
+    setError("Unable to load dashboard.");
+    toast.error("Unable to load dashboard.");
+  } finally {
+    setLoading(false);
+  }
+};
+useEffect(() => {
+  loadDashboard();
+}, []);
+
+  useEffect(() => {
+  toast.success("Frontend Ready 🚀");
+}, []);
 
   const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
 
@@ -32,13 +86,35 @@ const Dashboard = () => {
     setForm(emptyForm)
     setShowAddModal(false)
   }
-
+if (loading) {
+  return <Loader />;
+}
+if (error) {
   return (
+    <ErrorState
+      message={error}
+      onRetry={loadDashboard}
+    />
+  );
+}
+  return (
+    // <div className="space-y-6">
+    //   {/* Stats Cards */}
+    //   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    //     {statsData.map((stat) => <StatCard key={stat.id} {...stat} />)}
+    //   </div>
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {statsData.map((stat) => <StatCard key={stat.id} {...stat} />)}
-      </div>
+
+   {/* Stats Cards */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {stats.length > 0 ? (
+    stats.map((stat) => (
+      <StatCard key={stat.id} {...stat} />
+    ))
+  ) : (
+    <EmptyState message="Dashboard data is not available." />
+  )}
+</div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 gap-6">

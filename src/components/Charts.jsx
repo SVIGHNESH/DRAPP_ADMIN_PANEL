@@ -25,7 +25,7 @@ export const ExpenseChart = () => (
     <div className="grid grid-cols-2 gap-4 mb-6">
       <div className="bg-dark-800/50 rounded-xl p-4">
         <p className="text-sm text-dark-500 mb-1">Total Expense</p>
-        <p className="text-2xl font-bold text-dark-100">$126,583.00</p>
+        <p className="text-2xl font-bold text-dark-100">₹126,583.00</p>
       </div>
       <div className="space-y-2">
         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500" /><span className="text-xs text-dark-400">Revenue 58%</span></div>

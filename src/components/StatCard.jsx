@@ -1,7 +1,7 @@
 import React from 'react'
-import { TrendingUp, Users, Calendar, Stethoscope, DollarSign } from 'lucide-react'
+import { TrendingUp, Users, Calendar, Stethoscope, IndianRupee } from 'lucide-react'
 
-const iconMap = { Users, Calendar, Stethoscope, DollarSign }
+const iconMap = { Users, Calendar, Stethoscope, DollarSign: IndianRupee }
 
 const StatCard = ({ title, value, change, icon, gradient, desc }) => {
   const Icon = iconMap[icon] || Users

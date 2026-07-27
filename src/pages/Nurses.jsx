@@ -1,11 +1,25 @@
-import React, { useState } from 'react'
+// import React, { useState } from 'react'
 import { Search, Plus, Star, Phone, Mail, Calendar, MapPin, X, ChevronLeft, ChevronRight, Users, Clock, User, Trash2, AlertTriangle } from 'lucide-react'
 import { nursesData as initialNurses, bookingsData } from '../data/mockData'
+import React, { useState, useEffect } from "react";
+import {
+  bookingsData as initialBookings,
+  nursesData,
+  getStatusColor,
+} from "../data/mockData";
 
+import toast from "react-hot-toast";
+import Loader from "../components/Loader";
+import ErrorState from "../components/ErrorState";
+import EmptyState from "../components/EmptyState";
+
+// Future API
+import { getBookings } from "../api/bookings";
 const emptyForm = { name: '', gender: 'Female', careType: '', experience: '', phone: '', email: '', availability: '', address: '' }
 
 const Nurses = () => {
-  const [nurses, setNurses] = useState(initialNurses)
+  // const [nurses, setNurses] = useState(initialNurses)
+  const [nurses, setNurses] = useState(nursesData);
   const [searchQuery, setSearchQuery] = useState('')
   const [careFilter, setCareFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
@@ -14,6 +28,9 @@ const Nurses = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [deleteModalNurse, setDeleteModalNurse] = useState(null)
   const [form, setForm] = useState(emptyForm)
+  const [loading, setLoading] = useState(false);
+const [error, setError] = useState(null);
+const [bookings, setBookings] = useState(initialBookings);
 
   const careTypes = ['all', ...new Set(nurses.map(n => n.careType))]
   const filtered = nurses.filter(nurse => {
@@ -27,8 +44,53 @@ const Nurses = () => {
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   const bookingsForNurse = (nurseName) => bookingsData.filter(b => b.nurse === nurseName)
+  const loadBookings = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Future Backend
+    // const response = await getBookings();
+    // setBookings(response.data);
+
+    setBookings(initialBookings);
+
+  } catch (err) {
+    console.error(err);
+    setError("Bookings data is not available.");
+    toast.error("Unable to load bookings.");
+  } finally {
+    setLoading(false);
+  }
+};
+useEffect(() => {
+   loadBookings();
+}, []);
 
   const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+//   const loadBookings = async () => {
+//   try {
+//     setLoading(true);
+//     setError(null);
+
+//     await new Promise((resolve) => setTimeout(resolve, 1000));
+
+//     // Future Backend
+//     // const response = await getBookings();
+//     // setBookings(response.data);
+
+//     setBookings(initialBookings);
+
+//   } catch (err) {
+//     console.error(err);
+//     setError("Bookings data is not available.");
+//     toast.error("Unable to load bookings.");
+//   } finally {
+//     setLoading(false);
+//   }
+// };
 
   const handleAddNurse = (e) => {
     e.preventDefault()
@@ -61,7 +123,18 @@ const Nurses = () => {
     if (bookingModalNurse?.id === deleteModalNurse.id) setBookingModalNurse(null)
     if (locationModalNurse?.id === deleteModalNurse.id) setLocationModalNurse(null)
     setDeleteModalNurse(null)
-  }
+  } 
+  if (loading) {
+    return <Loader />;
+}
+if (error) {
+    return (
+        <ErrorState
+            message={error}
+            onRetry={loadBookings}
+        />
+    );
+}
 
   return (
     <div className="space-y-6">
