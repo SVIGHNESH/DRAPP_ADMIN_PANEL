@@ -1,12 +1,11 @@
 import React, { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, Navigate } from "react-router-dom"
 import { Heart, Eye, EyeOff, Loader } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
 import { getErrorMessage } from "../utils/apiError"
 import toast from "react-hot-toast"
 
 const Login = () => {
-  const navigate = useNavigate()
   const { login, isAuthenticated } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -14,8 +13,7 @@ const Login = () => {
   const [submitting, setSubmitting] = useState(false)
 
   if (isAuthenticated) {
-    navigate("/dashboard", { replace: true })
-    return null
+    return <Navigate to="/dashboard" replace />
   }
 
   const handleSubmit = async (e) => {
@@ -24,7 +22,7 @@ const Login = () => {
     setSubmitting(true)
     try {
       await login(email, password)
-      navigate("/dashboard", { replace: true })
+      toast.success("Logged in successfully")
     } catch (err) {
       toast.error(getErrorMessage(err))
     } finally {
