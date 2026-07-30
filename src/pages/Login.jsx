@@ -1,15 +1,20 @@
 import React, { useState } from "react"
 import { Link, Navigate } from "react-router-dom"
-import { Heart, Eye, EyeOff, Loader } from "lucide-react"
+import { Loader2 } from "lucide-react"
+import toast from "react-hot-toast"
+
 import { useAuth } from "../context/useAuth"
 import { getErrorMessage } from "../utils/apiError"
-import toast from "react-hot-toast"
+import AuthLayout from "../components/AuthLayout"
+import PasswordInput from "../components/PasswordInput"
+import { Button } from "@/components/ui/button"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 
 const Login = () => {
   const { login, isAuthenticated } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   if (isAuthenticated) {
@@ -31,61 +36,50 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-dark-900 flex items-center justify-center p-4">
-      <div className="card w-full max-w-md p-8">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-accent-cyan to-accent-teal rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Heart className="text-dark-900" size={32} />
-          </div>
-          <h1 className="text-2xl font-bold text-dark-100">Welcome Back</h1>
-          <p className="text-dark-500 mt-1">Sign in to Hospital Care Admin</p>
-        </div>
+    <AuthLayout title="Welcome back" description="Sign in to Hospital Care Admin">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field>
+          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="admin@example.com"
+            required
+            autoFocus
+          />
+        </Field>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-dark-500 mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@example.com"
-              className="input-field"
-              required
-              autoFocus
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-dark-500 mb-2">Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="input-field pr-10"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Link to="/forgot-password" className="text-sm text-accent-cyan hover:underline">
+        <Field>
+          <div className="flex items-baseline justify-between gap-3">
+            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <Link
+              to="/forgot-password"
+              className="rounded-xs text-xs text-accent-text outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            >
               Forgot password?
             </Link>
           </div>
-          <button type="submit" disabled={submitting} className="btn-primary w-full flex items-center justify-center gap-2">
-            {submitting ? <Loader size={18} className="animate-spin" /> : null}
-            {submitting ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
-      </div>
-    </div>
+          <PasswordInput
+            id="password"
+            name="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            required
+          />
+        </Field>
+
+        <Button type="submit" disabled={submitting} className="mt-1 w-full">
+          {submitting && <Loader2 className="animate-spin" />}
+          {submitting ? "Signing in..." : "Sign in"}
+        </Button>
+      </form>
+    </AuthLayout>
   )
 }
 

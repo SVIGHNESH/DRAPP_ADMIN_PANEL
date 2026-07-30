@@ -1,12 +1,24 @@
 import React, { useState, useEffect, useCallback } from "react"
-import { Search, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react'
-import { getServices, createService } from '../api/services'
-import { getErrorMessage } from '../utils/apiError'
+import { Loader2, Plus } from 'lucide-react'
 import toast from "react-hot-toast"
 
-import Loader from "../components/Loader"
+import { getServices, createService } from '../api/services'
+import { getErrorMessage } from '../utils/apiError'
+import PageHeader from "../components/PageHeader"
 import ErrorState from "../components/ErrorState"
 import EmptyState from "../components/EmptyState"
+import Pagination from "../components/Pagination"
+import SearchInput from "../components/SearchInput"
+import StatusBadge from "../components/StatusBadge"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import {
+  Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 
 const Services = () => {
   const [services, setServices] = useState([])
@@ -76,127 +88,105 @@ const Services = () => {
     setShowAddModal(true)
   }
 
-  if (loading) return <Loader />
-  if (error) return <ErrorState message={error} onRetry={loadData} />
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Services</h1>
-          <p className="text-dark-500 mt-1">
-            Healthcare services offered to patients. Services can be added but not edited or removed.
-          </p>
+    <>
+      <PageHeader
+        title="Services"
+        description="Healthcare services offered to patients. Services can be added but not edited or removed."
+        actions={
+          <Button onClick={openAdd}>
+            <Plus /> Add service
+          </Button>
+        }
+      />
+
+      {loading ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-[124px]" />)}
         </div>
-        <button onClick={openAdd} className="btn-primary flex items-center gap-2">
-          <Plus size={18} /> Add Service
-        </button>
-      </div>
-
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500" size={18} />
-        <input
-          type="text"
-          placeholder="Search services..."
-          value={searchQuery}
-          onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
-          className="input-field pl-10"
-        />
-      </div>
-
-      {filtered.length === 0 ? (
-        <EmptyState message="No services found. Create your first service to get started." />
+      ) : error ? (
+        <ErrorState message={error} onRetry={loadData} />
       ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginated.map((service) => (
-              <div key={service.service_id} className="card p-6">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent-cyan to-accent-teal flex items-center justify-center text-dark-900 text-xl font-bold mb-4">
-                  {service.name.charAt(0).toUpperCase()}
-                </div>
+        <div className="flex flex-col gap-4">
+          <SearchInput
+            className="max-w-xs"
+            placeholder="Search services..."
+            aria-label="Search services"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
+          />
 
-                <h3 className="font-bold text-dark-100 text-lg mb-1">{service.name}</h3>
-                {service.description && (
-                  <p className="text-sm text-dark-400 mb-3 line-clamp-2">{service.description}</p>
-                )}
+          {filtered.length === 0 ? (
+            <Card>
+              <EmptyState message="No services found. Create your first service to get started." />
+            </Card>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {paginated.map((service) => (
+                  <Card key={service.service_id} className="flex flex-col p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <h2 className="text-sm font-semibold text-fg">{service.name}</h2>
+                      <StatusBadge tone="success">Active</StatusBadge>
+                    </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-dark-700">
-                  <span className="text-lg font-bold text-accent-cyan">
-                    ₹{service.base_price}
-                    <span className="text-xs font-normal text-dark-500"> /hour</span>
-                  </span>
-                  <span className="badge bg-emerald-500/10 text-emerald-400">Active</span>
-                </div>
+                    {service.description && (
+                      <p className="mt-1.5 line-clamp-2 text-xs text-fg-muted">{service.description}</p>
+                    )}
+
+                    <div className="mt-auto flex items-baseline gap-1 pt-4">
+                      <span className="text-base font-medium text-fg tabular-nums">₹{service.base_price}</span>
+                      <span className="text-xs text-fg-muted">/hour</span>
+                    </div>
+                  </Card>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-dark-700 hover:bg-dark-800 disabled:opacity-50"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium ${
-                  currentPage === page
-                    ? 'bg-accent-cyan text-dark-900'
-                    : 'border border-dark-700 hover:bg-dark-800 text-dark-400'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-dark-700 hover:bg-dark-800 disabled:opacity-50"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </>
+              <Pagination
+                page={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                className="justify-center"
+              />
+            </>
+          )}
+        </div>
       )}
 
-      {/* Add Service Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowAddModal(false)}>
-          <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-dark-700">
-              <h3 className="font-bold text-dark-100 text-lg">Add Service</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-2 rounded-lg hover:bg-dark-800 text-dark-400">
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              <div>
-                <label className="block text-sm text-dark-500 mb-2">Service Name</label>
-                <input
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add service</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="contents">
+            <DialogBody className="flex flex-col gap-4">
+              <Field>
+                <FieldLabel htmlFor="service-name">Service name</FieldLabel>
+                <Input
+                  id="service-name"
                   required
                   value={form.name}
                   onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                   placeholder="e.g. Doctor Consultation"
-                  className="input-field"
                 />
-              </div>
-              <div>
-                <label className="block text-sm text-dark-500 mb-2">Description</label>
-                <textarea
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="service-description">Description</FieldLabel>
+                <Textarea
+                  id="service-description"
                   value={form.description}
                   onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                   placeholder="Brief description of the service"
                   rows={3}
-                  className="input-field resize-none"
                 />
-              </div>
-              <div>
-                <label className="block text-sm text-dark-500 mb-2">Base Price (₹ per hour)</label>
-                <input
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="service-price">Base price (₹ per hour)</FieldLabel>
+                <Input
+                  id="service-price"
                   type="number"
                   min="0"
                   step="0.01"
@@ -204,21 +194,24 @@ const Services = () => {
                   value={form.base_price}
                   onChange={(e) => setForm((p) => ({ ...p, base_price: e.target.value }))}
                   placeholder="0.00"
-                  className="input-field"
+                  className="tabular-nums"
                 />
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {submitting ? 'Saving...' : 'Create Service'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+              </Field>
+            </DialogBody>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowAddModal(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting && <Loader2 className="animate-spin" />}
+                {submitting ? 'Saving...' : 'Create service'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 

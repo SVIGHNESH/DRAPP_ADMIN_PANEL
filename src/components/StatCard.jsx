@@ -1,30 +1,27 @@
 import React from 'react'
-import { TrendingUp, Users, Calendar, IndianRupee } from 'lucide-react'
+import { Users, Calendar, IndianRupee } from 'lucide-react'
+
+import { Card } from '@/components/ui/card'
 
 const iconMap = { Users, Calendar, DollarSign: IndianRupee }
 
-const StatCard = ({ title, value, change, icon, gradient, desc }) => {
+/**
+ * Flat and bordered. T03 killed the three per-card gradients along with every
+ * other gradient in the app, and gave cards no shadow: depth is the 1px border.
+ * The value is tabular so the three cards stay aligned as counts change.
+ */
+const StatCard = ({ title, value, icon, desc }) => {
   const Icon = iconMap[icon] || Users
 
   return (
-    <div className={`bg-gradient-to-br ${gradient} rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300`}>
-      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-      <div className="relative z-10">
-        <div className="flex items-center justify-between mb-4">
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <Icon size={24} className="text-white" />
-          </div>
-          {change && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-white/20">
-              <TrendingUp size={14} /> {change}
-            </div>
-          )}
-        </div>
-        <h3 className="text-white/80 text-sm font-medium mb-1">{title}</h3>
-        <p className="text-3xl font-bold text-white mb-1">{value}</p>
-        {desc && <p className="text-white/60 text-xs">{desc}</p>}
+    <Card className="p-4">
+      <div className="flex items-center gap-2 text-fg-muted">
+        <Icon size={14} className="shrink-0" />
+        <h3 className="truncate text-xs font-medium">{title}</h3>
       </div>
-    </div>
+      <p className="mt-2 text-2xl font-semibold text-fg tabular-nums">{value}</p>
+      {desc && <p className="mt-1 truncate text-xs text-fg-muted">{desc}</p>}
+    </Card>
   )
 }
 

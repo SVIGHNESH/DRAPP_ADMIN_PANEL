@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react"
 import {
-  Search, Plus, Calendar, Clock, X, ChevronLeft, ChevronRight,
-  User, MessageSquare, CheckCircle, Loader as LoaderIcon
+  Calendar, CheckCircle, Clock, Loader2, MessageSquare, Plus, User,
 } from 'lucide-react'
+import toast from "react-hot-toast"
+
 import {
   STATUS_LIST, ADMIN_SETTABLE_STATUSES, UI_STATUS_MAP, BACKEND_STATUS_MAP,
-  getPaymentStatusColor,
+  getPaymentStatusTone,
 } from '../constants/status'
 import { getBookings as apiGetBookings, createBooking, confirmBooking, updateBookingStatus, addBookingNote } from '../api/bookings'
 import { getServices } from '../api/services'
@@ -13,11 +14,26 @@ import { getNurses, getAvailableNurses } from '../api/nurses'
 import { toUiBooking, buildServiceMap } from '../adapters/booking'
 import { getErrorMessage } from '../utils/apiError'
 import { toDateParam } from '../utils/formatDate'
-import toast from "react-hot-toast"
-
-import Loader from "../components/Loader"
+import PageHeader from "../components/PageHeader"
 import ErrorState from "../components/ErrorState"
 import EmptyState from "../components/EmptyState"
+import Pagination from "../components/Pagination"
+import SearchInput from "../components/SearchInput"
+import StatusBadge from "../components/StatusBadge"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  focusContent,
+} from "@/components/ui/dialog"
+import { Field, FieldHint, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Textarea } from "@/components/ui/textarea"
 
 const emptyForm = { service_id: '', slot_start: '', slot_end: '', custom_address: '', notes: '' }
 const emptyAvailability = { loading: false, list: null, error: null, date: null }
@@ -26,6 +42,14 @@ const emptyConfirmForm = { nurse_id: null, nurse_name: '', nurse_contact: '' }
 // The backend allows confirming from pending_payment, requested and confirmed.
 const canConfirm = (status) =>
   status === 'awaiting-payment' || status === 'pending' || status === 'confirmed'
+
+/** One of the field boxes in the detail modal, on T03's --surface-sunken. */
+const DetailBox = ({ label, children, className }) => (
+  <div className={`rounded-md border border-border bg-surface-sunken p-2.5 ${className || ''}`}>
+    <p className="text-2xs font-medium tracking-wide text-fg-muted uppercase">{label}</p>
+    <div className="mt-1 text-sm text-fg">{children}</div>
+  </div>
+)
 
 const Bookings = () => {
   const [bookings, setBookings] = useState([])
@@ -260,458 +284,428 @@ const Bookings = () => {
     }
   }
 
-  if (loading) return <Loader />
-  if (error) return <ErrorState message={error} onRetry={loadData} />
+  const detail = showDetailModal
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Bookings</h1>
-          <p className="text-dark-500 mt-1">Manage all caretaker bookings</p>
-        </div>
-        <button onClick={() => setShowAddModal(true)} className="btn-primary flex items-center gap-2">
-          <Plus size={18} /> New Booking
-        </button>
-      </div>
+    <>
+      <PageHeader
+        title="Bookings"
+        description="Manage all caretaker bookings"
+        actions={
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus /> New booking
+          </Button>
+        }
+      />
 
-      <div className="card p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500" size={18} />
-            <input
-              type="text"
+      {loading ? (
+        <Skeleton className="h-[520px]" />
+      ) : error ? (
+        <ErrorState message={error} onRetry={loadData} />
+      ) : (
+        <Card>
+          <div className="flex flex-col items-start gap-3 border-b border-border p-3 sm:flex-row sm:items-center sm:justify-between">
+            <SearchInput
+              className="w-full sm:max-w-xs"
               placeholder="Search bookings..."
+              aria-label="Search bookings"
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
-              className="input-field pl-10"
             />
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-dark-400 whitespace-nowrap cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showPending}
-                onChange={(e) => { setShowPending(e.target.checked); setCurrentPage(1) }}
-                className="accent-accent-cyan"
-              />
-              Show awaiting payment
-            </label>
-            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1) }} className="input-field w-44">
-              <option value="all">All Status</option>
-              {STATUS_LIST.map((s) => (
-                <option key={s} value={UI_STATUS_MAP[s]}>{UI_STATUS_MAP[s]}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-dark-700">
-                <th className="table-header">User</th>
-                <th className="table-header">Nurse</th>
-                <th className="table-header">Care Type</th>
-                <th className="table-header">Date & Time</th>
-                <th className="table-header">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((b) => (
-                <tr
-                  key={b.id}
-                  className="border-b border-dark-700/50 hover:bg-dark-800/30 cursor-pointer"
-                  onClick={() => openDetail(b)}
-                >
-                  <td className="table-cell">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-cyan to-accent-teal flex items-center justify-center text-dark-900 text-sm font-bold">
-                        {b.avatar}
-                      </div>
-                      <div>
-                        <p className="font-medium text-dark-200">{b.userName}</p>
-                        <p className="text-xs text-dark-500">{b.userEmail || `#${b.userId}`}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="table-cell text-dark-300">{b.nurse}</td>
-                  <td className="table-cell text-dark-400">{b.careType}</td>
-                  <td className="table-cell">
-                    <div className="flex items-center gap-2 text-dark-300">
-                      <Calendar size={14} className="text-dark-500" />
-                      {b.date}
-                    </div>
-                    <div className="flex items-center gap-2 text-dark-500 text-xs mt-1">
-                      <Clock size={14} />
-                      {b.time}
-                    </div>
-                  </td>
-                  <td className="table-cell">
-                    <span className={`badge ${b.statusBadge}`}>{b.status}</span>
-                  </td>
-                </tr>
-              ))}
-              {paginated.length === 0 && (
-                <tr>
-                  <td colSpan="5">
-                    <EmptyState message="No bookings found." />
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-dark-700">
-          <p className="text-sm text-dark-500">
-            Showing {filtered.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} to{' '}
-            {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} results
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-dark-700 hover:bg-dark-800 disabled:opacity-50"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium ${
-                  currentPage === page
-                    ? 'bg-accent-cyan text-dark-900'
-                    : 'border border-dark-700 hover:bg-dark-800 text-dark-400'
-                }`}
+            <div className="flex w-full items-center gap-3 sm:w-auto">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="show-pending"
+                  checked={showPending}
+                  onCheckedChange={(checked) => { setShowPending(checked === true); setCurrentPage(1) }}
+                />
+                <Label htmlFor="show-pending" className="whitespace-nowrap">
+                  Show awaiting payment
+                </Label>
+              </div>
+              <Select
+                className="w-40"
+                aria-label="Filter by status"
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1) }}
               >
-                {page}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-dark-700 hover:bg-dark-800 disabled:opacity-50"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Detail Modal */}
-      {showDetailModal && (
-        <div
-          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-          onClick={closeDetail}
-        >
-          <div
-            className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-5 border-b border-dark-700">
-              <h3 className="font-bold text-dark-100 text-lg">
-                Booking #{showDetailModal.bookingId}
-              </h3>
-              <button
-                onClick={closeDetail}
-                className="p-2 rounded-lg hover:bg-dark-800 text-dark-400"
-              >
-                <X size={18} />
-              </button>
+                <option value="all">All Status</option>
+                {STATUS_LIST.map((s) => (
+                  <option key={s} value={UI_STATUS_MAP[s]}>{UI_STATUS_MAP[s]}</option>
+                ))}
+              </Select>
             </div>
+          </div>
 
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-dark-800/50 rounded-xl p-3">
-                  <p className="text-xs text-dark-500 mb-1">Booked by</p>
-                  <p className="text-sm font-medium text-dark-200">{showDetailModal.userName}</p>
-                  {showDetailModal.userEmail && (
-                    <p className="text-xs text-dark-500 truncate">{showDetailModal.userEmail}</p>
+          {paginated.length === 0 ? (
+            <EmptyState message="No bookings found." />
+          ) : (
+            // min-w: five columns of names, dates and statuses do not compress
+            // below this without every cell wrapping to three lines, so the
+            // table scrolls sideways on a phone rather than concertinaing.
+            <Table className="min-w-[760px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Nurse</TableHead>
+                  <TableHead>Care Type</TableHead>
+                  <TableHead>Date &amp; Time</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginated.map((b) => (
+                  <TableRow key={b.id} interactive onClick={() => openDetail(b)}>
+                    <TableCell>
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-surface-sunken text-2xs font-medium text-fg-secondary">
+                          {b.avatar}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium text-fg">{b.userName}</span>
+                          <span className="block truncate text-xs text-fg-muted">
+                            {b.userEmail || `#${b.userId}`}
+                          </span>
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{b.nurse}</TableCell>
+                    <TableCell className="whitespace-nowrap text-fg-muted">{b.careType}</TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-1.5 whitespace-nowrap tabular-nums">
+                        <Calendar size={12} className="shrink-0 text-fg-subtle" />
+                        {b.date}
+                      </span>
+                      <span className="mt-0.5 flex items-center gap-1.5 text-xs whitespace-nowrap text-fg-muted tabular-nums">
+                        <Clock size={12} className="shrink-0" />
+                        {b.time}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge tone={b.statusTone}>{b.status}</StatusBadge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+
+          <div className="flex flex-col items-center justify-between gap-3 border-t border-border p-3 sm:flex-row">
+            <p className="text-xs text-fg-muted tabular-nums">
+              Showing {filtered.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} to{' '}
+              {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} results
+            </p>
+            <Pagination page={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+          </div>
+        </Card>
+      )}
+
+      {/* Detail */}
+      <Dialog open={!!detail} onOpenChange={(open) => !open && closeDetail()}>
+        <DialogContent onOpenAutoFocus={focusContent}>
+          <DialogHeader>
+            <DialogTitle className="tabular-nums">Booking #{detail?.bookingId}</DialogTitle>
+          </DialogHeader>
+
+          {detail && (
+            <DialogBody className="flex flex-col gap-5">
+              <div className="grid grid-cols-2 gap-2">
+                <DetailBox label="Booked by">
+                  <p className="truncate">{detail.userName}</p>
+                  {detail.userEmail && (
+                    <p className="truncate text-xs text-fg-muted">{detail.userEmail}</p>
                   )}
-                </div>
-                <div className="bg-dark-800/50 rounded-xl p-3">
-                  <p className="text-xs text-dark-500 mb-1">Status</p>
-                  <span className={`badge ${showDetailModal.statusBadge}`}>{showDetailModal.status}</span>
-                </div>
-                <div className="bg-dark-800/50 rounded-xl p-3">
-                  <p className="text-xs text-dark-500 mb-1">Care Type</p>
-                  <p className="text-sm text-dark-200">{showDetailModal.careType}</p>
-                </div>
-                <div className="bg-dark-800/50 rounded-xl p-3">
-                  <p className="text-xs text-dark-500 mb-1">Payment</p>
-                  {showDetailModal.paymentStatus ? (
-                    <span className={`badge ${getPaymentStatusColor(showDetailModal.paymentStatus)}`}>
-                      {showDetailModal.paymentStatus}
-                    </span>
+                </DetailBox>
+                <DetailBox label="Status">
+                  <StatusBadge tone={detail.statusTone} className="bg-surface">
+                    {detail.status}
+                  </StatusBadge>
+                </DetailBox>
+                <DetailBox label="Care type">{detail.careType}</DetailBox>
+                <DetailBox label="Payment">
+                  {detail.paymentStatus ? (
+                    <StatusBadge tone={getPaymentStatusTone(detail.paymentStatus)} className="bg-surface">
+                      {detail.paymentStatus}
+                    </StatusBadge>
                   ) : (
-                    <p className="text-sm text-dark-400">No payment yet</p>
+                    <span className="text-fg-muted">No payment yet</span>
                   )}
-                </div>
-                {showDetailModal.patientName && (
-                  <div className="bg-dark-800/50 rounded-xl p-3 col-span-2">
-                    <p className="text-xs text-dark-500 mb-1">Patient</p>
-                    <p className="text-sm text-dark-200">
-                      {showDetailModal.patientName}
-                      {showDetailModal.patientAge != null && `, ${showDetailModal.patientAge} yrs`}
-                      {showDetailModal.patientSex && ` (${showDetailModal.patientSex})`}
+                </DetailBox>
+                {detail.patientName && (
+                  <DetailBox label="Patient" className="col-span-2">
+                    <p>
+                      {detail.patientName}
+                      {detail.patientAge != null && `, ${detail.patientAge} yrs`}
+                      {detail.patientSex && ` (${detail.patientSex})`}
                     </p>
-                    {showDetailModal.patientCondition && (
-                      <p className="text-xs text-dark-400 mt-1">{showDetailModal.patientCondition}</p>
+                    {detail.patientCondition && (
+                      <p className="mt-0.5 text-xs text-fg-muted">{detail.patientCondition}</p>
                     )}
-                  </div>
+                  </DetailBox>
                 )}
-                <div className="bg-dark-800/50 rounded-xl p-3">
-                  <p className="text-xs text-dark-500 mb-1">Nurse</p>
-                  <p className="text-sm text-dark-200">{showDetailModal.nurse}</p>
-                </div>
-                <div className="bg-dark-800/50 rounded-xl p-3">
-                  <p className="text-xs text-dark-500 mb-1">Slot</p>
-                  <p className="text-sm text-dark-200">{showDetailModal.date} {showDetailModal.time}</p>
-                </div>
-                <div className="bg-dark-800/50 rounded-xl p-3 col-span-2">
-                  <p className="text-xs text-dark-500 mb-1">Address</p>
-                  <p className="text-sm text-dark-200">{showDetailModal.address}</p>
-                </div>
+                <DetailBox label="Nurse">{detail.nurse}</DetailBox>
+                <DetailBox label="Slot">
+                  <span className="tabular-nums">{detail.date} {detail.time}</span>
+                </DetailBox>
+                <DetailBox label="Address" className="col-span-2">{detail.address}</DetailBox>
               </div>
 
-              {/* Notes timeline */}
-              {showDetailModal.notes.length > 0 && (
-                <div>
-                  <h4 className="font-semibold text-dark-200 mb-3 flex items-center gap-2">
-                    <MessageSquare size={16} /> Notes
-                  </h4>
-                  <div className="space-y-3">
-                    {showDetailModal.notes.map((note) => (
-                      <div key={note.note_id} className="bg-dark-800/30 rounded-xl p-3 border border-dark-700/50">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-accent-cyan">{note.author}</span>
-                          <span className="text-xs text-dark-500">
+              {detail.notes.length > 0 && (
+                <section>
+                  <h3 className="mb-2 flex items-center gap-1.5 text-xs font-medium text-fg-secondary">
+                    <MessageSquare size={13} className="text-fg-subtle" /> Notes
+                  </h3>
+                  <div className="flex flex-col gap-2">
+                    {detail.notes.map((note) => (
+                      <div key={note.note_id} className="rounded-md border border-border bg-surface-sunken p-2.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="truncate text-xs font-medium text-fg">{note.author}</span>
+                          <span className="shrink-0 text-xs text-fg-muted tabular-nums">
                             {new Date(note.created_at).toLocaleString('en-IN', {
                               day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                             })}
                           </span>
                         </div>
-                        <p className="text-sm text-dark-300">{note.message}</p>
+                        <p className="mt-1 text-sm text-fg-secondary">{note.message}</p>
                       </div>
                     ))}
                   </div>
-                </div>
+                </section>
               )}
 
-              {/* Add Note */}
-              <div>
-                <label className="block text-sm text-dark-500 mb-2">Add Note</label>
+              <Field>
+                <FieldLabel htmlFor="booking-note">Add note</FieldLabel>
                 <div className="flex gap-2">
-                  <input
+                  <Input
+                    id="booking-note"
                     value={noteText}
                     onChange={(e) => setNoteText(e.target.value)}
                     placeholder="Write a note..."
-                    className="input-field flex-1"
                     disabled={submitting}
                   />
-                  <button
-                    onClick={() => handleAddNote(showDetailModal.bookingId)}
+                  <Button
+                    onClick={() => handleAddNote(detail.bookingId)}
                     disabled={submitting || !noteText.trim()}
-                    className="btn-primary"
                   >
-                    {submitting ? <LoaderIcon size={16} className="animate-spin" /> : 'Add'}
-                  </button>
+                    {submitting ? <Loader2 className="animate-spin" /> : 'Add'}
+                  </Button>
                 </div>
-              </div>
+              </Field>
 
-              {/* Admin actions */}
-              <div className="border-t border-dark-700 pt-4 space-y-3">
-                {/* Confirm */}
-                {canConfirm(showDetailModal.status) && (
-                  <div className="bg-dark-800/30 rounded-xl p-3 space-y-2">
-                    <h4 className="font-semibold text-dark-200 text-sm">Confirm & Assign Nurse</h4>
+              {canConfirm(detail.status) && (
+                <section className="flex flex-col gap-2 rounded-md border border-border bg-surface-sunken p-3">
+                  <h3 className="text-xs font-medium text-fg">Confirm &amp; assign nurse</h3>
 
-                    {availability.loading ? (
-                      <div className="flex items-center gap-2 text-sm text-dark-500 py-2">
-                        <LoaderIcon size={14} className="animate-spin" />
-                        Checking nurse availability for {showDetailModal.date}...
-                      </div>
-                    ) : (
-                      <>
-                        <select
-                          value={manualNurse ? '__manual__' : (confirmForm.nurse_id ?? '')}
-                          onChange={(e) => handleSelectNurse(e.target.value)}
-                          className="input-field"
+                  {availability.loading ? (
+                    <div className="flex items-center gap-2 py-1 text-xs text-fg-muted">
+                      <Loader2 size={13} className="animate-spin" />
+                      Checking nurse availability for {detail.date}...
+                    </div>
+                  ) : (
+                    <>
+                      <Select
+                        aria-label="Select a nurse"
+                        value={manualNurse ? '__manual__' : (confirmForm.nurse_id ?? '')}
+                        onChange={(e) => handleSelectNurse(e.target.value)}
+                        disabled={submitting}
+                      >
+                        <option value="">Select a nurse</option>
+                        {nurseOptions.map((n) => (
+                          <option key={n.nurse_id} value={n.nurse_id}>
+                            {n.nurse_name}
+                            {n.specialization ? ` - ${n.specialization}` : ''}
+                            {n.experience_years != null ? ` (${n.experience_years}y)` : ''}
+                          </option>
+                        ))}
+                        <option value="__manual__">Enter nurse manually...</option>
+                      </Select>
+
+                      {availability.list && (
+                        <FieldHint>
+                          {availability.list.length === 0
+                            ? `No nurses free on ${detail.date}. Assign manually if you have arranged cover.`
+                            : `${availability.list.length} nurse${availability.list.length !== 1 ? 's' : ''} available on ${detail.date}.`}
+                        </FieldHint>
+                      )}
+                      {availability.error && (
+                        <p className="text-xs text-warning">
+                          Availability check failed ({availability.error}). Showing all active nurses.
+                        </p>
+                      )}
+
+                      {manualNurse && (
+                        <Input
+                          value={confirmForm.nurse_name}
+                          onChange={(e) => setConfirmForm((prev) => ({ ...prev, nurse_name: e.target.value }))}
+                          placeholder="Nurse name"
+                          aria-label="Nurse name"
                           disabled={submitting}
-                        >
-                          <option value="">Select a nurse</option>
-                          {nurseOptions.map((n) => (
-                            <option key={n.nurse_id} value={n.nurse_id}>
-                              {n.nurse_name}
-                              {n.specialization ? ` - ${n.specialization}` : ''}
-                              {n.experience_years != null ? ` (${n.experience_years}y)` : ''}
-                            </option>
-                          ))}
-                          <option value="__manual__">Enter nurse manually...</option>
-                        </select>
+                        />
+                      )}
+                    </>
+                  )}
 
-                        {availability.list && (
-                          <p className="text-xs text-dark-500">
-                            {availability.list.length === 0
-                              ? `No nurses free on ${showDetailModal.date}. Assign manually if you have arranged cover.`
-                              : `${availability.list.length} nurse${availability.list.length !== 1 ? 's' : ''} available on ${showDetailModal.date}.`}
-                          </p>
-                        )}
-                        {availability.error && (
-                          <p className="text-xs text-amber-400">
-                            Availability check failed ({availability.error}). Showing all active nurses.
-                          </p>
-                        )}
-
-                        {manualNurse && (
-                          <input
-                            value={confirmForm.nurse_name}
-                            onChange={(e) => setConfirmForm((prev) => ({ ...prev, nurse_name: e.target.value }))}
-                            placeholder="Nurse name"
-                            className="input-field"
-                            disabled={submitting}
-                          />
-                        )}
-                      </>
-                    )}
-
-                    <input
-                      value={confirmForm.nurse_contact}
-                      onChange={(e) => setConfirmForm((prev) => ({ ...prev, nurse_contact: e.target.value }))}
-                      placeholder="Nurse contact (optional)"
-                      className="input-field"
-                      disabled={submitting}
-                    />
-                    <button
-                      onClick={() => handleConfirm(showDetailModal.bookingId)}
-                      disabled={submitting || !confirmForm.nurse_name}
-                      className="btn-primary w-full flex items-center justify-center gap-2"
-                    >
-                      {submitting ? <LoaderIcon size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                      Confirm Booking
-                    </button>
-                  </div>
-                )}
-
-                {/* Change Status */}
-                <div>
-                  <label className="block text-sm text-dark-500 mb-2">Change Status</label>
-                  <select
-                    value={BACKEND_STATUS_MAP[showDetailModal.status] || showDetailModal.status}
-                    onChange={(e) => {
-                      const backendStatus = e.target.value
-                      if (backendStatus && backendStatus !== (BACKEND_STATUS_MAP[showDetailModal.status] || showDetailModal.status)) {
-                        handleStatusChange(showDetailModal.bookingId, backendStatus)
-                      }
-                    }}
-                    className="input-field"
+                  <Input
+                    value={confirmForm.nurse_contact}
+                    onChange={(e) => setConfirmForm((prev) => ({ ...prev, nurse_contact: e.target.value }))}
+                    placeholder="Nurse contact (optional)"
+                    aria-label="Nurse contact"
                     disabled={submitting}
+                  />
+                  <Button
+                    onClick={() => handleConfirm(detail.bookingId)}
+                    disabled={submitting || !confirmForm.nurse_name}
+                    className="w-full"
                   >
-                    {/* pending_payment is only listed while the booking is in
-                        it - a checkout state is not something to move back to. */}
-                    {showDetailModal.backendStatus === 'pending_payment' && (
-                      <option value="pending_payment">{UI_STATUS_MAP.pending_payment}</option>
-                    )}
-                    {ADMIN_SETTABLE_STATUSES.map((s) => (
-                      <option key={s} value={s}>{UI_STATUS_MAP[s]}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+                    {submitting ? <Loader2 className="animate-spin" /> : <CheckCircle />}
+                    Confirm booking
+                  </Button>
+                </section>
+              )}
 
-              {showDetailModal.assignedNurse && (
-                <div className="flex items-center gap-2 text-sm text-dark-400 pt-2 border-t border-dark-700">
-                  <User size={14} className="text-accent-teal" />
+              <Field>
+                <FieldLabel htmlFor="booking-status">Change status</FieldLabel>
+                <Select
+                  id="booking-status"
+                  value={BACKEND_STATUS_MAP[detail.status] || detail.status}
+                  onChange={(e) => {
+                    const backendStatus = e.target.value
+                    if (backendStatus && backendStatus !== (BACKEND_STATUS_MAP[detail.status] || detail.status)) {
+                      handleStatusChange(detail.bookingId, backendStatus)
+                    }
+                  }}
+                  disabled={submitting}
+                >
+                  {/* pending_payment is only listed while the booking is in
+                      it - a checkout state is not something to move back to. */}
+                  {detail.backendStatus === 'pending_payment' && (
+                    <option value="pending_payment">{UI_STATUS_MAP.pending_payment}</option>
+                  )}
+                  {ADMIN_SETTABLE_STATUSES.map((s) => (
+                    <option key={s} value={s}>{UI_STATUS_MAP[s]}</option>
+                  ))}
+                </Select>
+              </Field>
+
+              {detail.assignedNurse && (
+                <div className="flex items-start gap-2 border-t border-border pt-3 text-xs text-fg-muted">
+                  <User size={13} className="mt-px shrink-0 text-fg-subtle" />
                   <span>
-                    Assigned to <strong className="text-dark-200">{showDetailModal.assignedNurse.nurse_name}</strong>
-                    {showDetailModal.assignedNurse.nurse_contact && (
+                    Assigned to <span className="font-medium text-fg">{detail.assignedNurse.nurse_name}</span>
+                    {detail.assignedNurse.nurse_contact && (
                       <>
                         {' '}&middot;{' '}
-                        <a href={`tel:${showDetailModal.assignedNurse.nurse_contact}`} className="text-accent-cyan hover:underline">
-                          {showDetailModal.assignedNurse.nurse_contact}
+                        <a
+                          href={`tel:${detail.assignedNurse.nurse_contact}`}
+                          className="rounded-xs text-accent-text tabular-nums outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {detail.assignedNurse.nurse_contact}
                         </a>
                       </>
                     )}
                   </span>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogBody>
+          )}
+        </DialogContent>
+      </Dialog>
 
-      {/* New Booking Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowAddModal(false)}>
-          <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-dark-700">
-              <h3 className="font-bold text-dark-100 text-lg">New Booking</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-2 rounded-lg hover:bg-dark-800 text-dark-400">
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleCreateBooking} className="p-5 space-y-4">
-              <div>
-                <label className="block text-sm text-dark-500 mb-2">Service</label>
-                <select required name="service_id" value={form.service_id} onChange={handleChange} className="input-field">
+      {/* New Booking */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New booking</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateBooking} className="contents">
+            <DialogBody className="flex flex-col gap-4">
+              <Field>
+                <FieldLabel htmlFor="booking-service">Service</FieldLabel>
+                <Select
+                  id="booking-service"
+                  required
+                  name="service_id"
+                  value={form.service_id}
+                  onChange={handleChange}
+                >
                   <option value="">Select a service</option>
                   {services.map((s) => (
                     <option key={s.service_id} value={s.service_id}>
                       {s.name} (₹{s.base_price})
                     </option>
                   ))}
-                </select>
+                </Select>
+              </Field>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="slot-start">Start date &amp; time</FieldLabel>
+                  <Input
+                    id="slot-start"
+                    required
+                    type="datetime-local"
+                    name="slot_start"
+                    value={form.slot_start}
+                    onChange={handleChange}
+                    className="tabular-nums"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="slot-end">End date &amp; time</FieldLabel>
+                  <Input
+                    id="slot-end"
+                    required
+                    type="datetime-local"
+                    name="slot_end"
+                    value={form.slot_end}
+                    onChange={handleChange}
+                    className="tabular-nums"
+                  />
+                </Field>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-dark-500 mb-2">Start Date & Time</label>
-                  <input required type="datetime-local" name="slot_start" value={form.slot_start} onChange={handleChange} className="input-field" />
-                </div>
-                <div>
-                  <label className="block text-sm text-dark-500 mb-2">End Date & Time</label>
-                  <input required type="datetime-local" name="slot_end" value={form.slot_end} onChange={handleChange} className="input-field" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-dark-500 mb-2">Address (free text)</label>
-                <input
+
+              <Field>
+                <FieldLabel htmlFor="booking-address">Address (free text)</FieldLabel>
+                <Input
+                  id="booking-address"
                   required
                   name="custom_address"
                   value={form.custom_address}
                   onChange={handleChange}
                   placeholder="e.g. Sector 12, Bareilly"
-                  className="input-field"
                 />
-                <p className="text-xs text-dark-500 mt-1">
+                <FieldHint>
                   Note: Booking will be created under your own account (admin). Saved addresses cannot be selected here.
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm text-dark-500 mb-2">Notes (optional)</label>
-                <textarea
+                </FieldHint>
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="booking-notes">Notes (optional)</FieldLabel>
+                <Textarea
+                  id="booking-notes"
                   name="notes"
                   value={form.notes}
                   onChange={handleChange}
                   placeholder="Any additional notes..."
-                  className="input-field"
                   rows={2}
                 />
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="btn-primary w-full flex items-center justify-center gap-2"
-              >
-                {submitting ? <LoaderIcon size={18} className="animate-spin" /> : <Plus size={18} />}
-                {submitting ? 'Creating...' : 'Create Booking'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+              </Field>
+            </DialogBody>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowAddModal(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
+                {submitting ? 'Creating...' : 'Create booking'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 

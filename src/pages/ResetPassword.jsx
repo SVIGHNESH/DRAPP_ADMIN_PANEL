@@ -1,15 +1,19 @@
 import React, { useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { Heart, Eye, EyeOff, Loader, ArrowLeft } from "lucide-react"
+import { ArrowLeft, Loader2 } from "lucide-react"
+import toast from "react-hot-toast"
+
 import { resetPassword } from "../api/auth"
 import { getErrorMessage } from "../utils/apiError"
-import toast from "react-hot-toast"
+import AuthLayout from "../components/AuthLayout"
+import PasswordInput from "../components/PasswordInput"
+import { Button } from "@/components/ui/button"
+import { Field, FieldLabel } from "@/components/ui/field"
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams()
   const token = searchParams.get("token") || ""
   const [newPassword, setNewPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -37,73 +41,56 @@ const ResetPassword = () => {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-dark-900 flex items-center justify-center p-4">
-        <div className="card w-full max-w-md p-8 text-center">
-          <h1 className="text-2xl font-bold text-dark-100 mb-4">Invalid Link</h1>
-          <p className="text-dark-500 mb-6">This reset link is missing or invalid.</p>
-          <Link to="/forgot-password" className="btn-primary inline-flex items-center gap-2">
-            Request a new link
-          </Link>
-        </div>
-      </div>
+      <AuthLayout title="Invalid link" description="This reset link is missing or invalid.">
+        <Button asChild className="w-full">
+          <Link to="/forgot-password">Request a new link</Link>
+        </Button>
+      </AuthLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-dark-900 flex items-center justify-center p-4">
-      <div className="card w-full max-w-md p-8">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-accent-cyan to-accent-teal rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Heart className="text-dark-900" size={32} />
-          </div>
-          <h1 className="text-2xl font-bold text-dark-100">Set New Password</h1>
-          <p className="text-dark-500 mt-1">Enter your new password below</p>
-        </div>
-
-        {done ? (
-          <div className="text-center space-y-4">
-            <p className="text-dark-300">Your password has been reset.</p>
-            <Link to="/login" className="btn-primary inline-flex items-center gap-2">
-              <ArrowLeft size={16} /> Back to Login
+    <AuthLayout title="Set a new password" description="Enter your new password below">
+      {done ? (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-fg-secondary">Your password has been reset.</p>
+          <Button asChild variant="outline" className="w-full">
+            <Link to="/login">
+              <ArrowLeft /> Back to login
             </Link>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm text-dark-500 mb-2">New Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="At least 8 characters"
-                  className="input-field pr-10"
-                  required
-                  minLength={8}
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-            <button type="submit" disabled={submitting} className="btn-primary w-full flex items-center justify-center gap-2">
-              {submitting ? <Loader size={18} className="animate-spin" /> : null}
-              {submitting ? "Resetting..." : "Reset Password"}
-            </button>
-            <div className="text-center">
-              <Link to="/login" className="text-sm text-accent-cyan hover:underline inline-flex items-center gap-1">
-                <ArrowLeft size={14} /> Back to Login
-              </Link>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Field>
+            <FieldLabel htmlFor="new-password">New password</FieldLabel>
+            <PasswordInput
+              id="new-password"
+              name="new-password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="At least 8 characters"
+              required
+              minLength={8}
+              autoFocus
+            />
+          </Field>
+
+          <Button type="submit" disabled={submitting} className="mt-1 w-full">
+            {submitting && <Loader2 className="animate-spin" />}
+            {submitting ? "Resetting..." : "Reset password"}
+          </Button>
+
+          <Link
+            to="/login"
+            className="inline-flex items-center justify-center gap-1 rounded-xs text-xs text-fg-muted outline-none hover:text-fg focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ArrowLeft size={13} /> Back to login
+          </Link>
+        </form>
+      )}
+    </AuthLayout>
   )
 }
 

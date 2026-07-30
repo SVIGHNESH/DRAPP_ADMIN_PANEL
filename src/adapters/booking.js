@@ -1,4 +1,4 @@
-import { UI_STATUS_MAP, getStatusColor } from "../constants/status"
+import { UI_STATUS_MAP, getStatusTone } from "../constants/status"
 import { formatSlotRange } from "../utils/formatDate"
 
 export function toUiBooking(bookingOut, serviceMap) {
@@ -45,7 +45,7 @@ export function toUiBooking(bookingOut, serviceMap) {
     date,
     time,
     status: uiStatus,
-    statusBadge: getStatusColor(uiStatus),
+    statusTone: getStatusTone(uiStatus),
     address,
     avatar: initials,
     slotStart: bookingOut.slot_start,

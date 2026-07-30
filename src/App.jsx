@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import Sidebar from './components/Sidebar'
-import Topbar from './components/Topbar'
+import AppShell from './components/AppShell'
+import NotFound from './components/NotFound'
 import Dashboard from './pages/Dashboard'
 import Bookings from './pages/Bookings'
 import Nurses from './pages/Nurses'
@@ -12,9 +12,9 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import ProtectedRoute from './components/ProtectedRoute'
 
+// Login, ForgotPassword and ResetPassword sit outside ProtectedRoute on
+// purpose: they render with no shell around them.
 function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -24,30 +24,17 @@ function App() {
         path="/*"
         element={
           <ProtectedRoute>
-            <div className="flex h-screen bg-dark-900 overflow-hidden">
-              <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-              <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'ml-72' : 'ml-20'}`}>
-                <Topbar />
-                <main className="flex-1 overflow-y-auto p-6">
-                  <div className="max-w-7xl mx-auto">
-                    <Routes>
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/bookings" element={<Bookings />} />
-                        <Route path="/nurses" element={<Nurses />} />
-                        <Route path="/services" element={<Services />} />
-                        <Route path="/help" element={<Help />} />
-                      <Route path="*" element={
-                        <div className="flex flex-col items-center justify-center h-64">
-                          <h1 className="text-4xl font-bold text-dark-400">404</h1>
-                          <p className="text-dark-500 mt-2">Page not found</p>
-                        </div>
-                      } />
-                    </Routes>
-                  </div>
-                </main>
-              </div>
-            </div>
+            <AppShell>
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/bookings" element={<Bookings />} />
+                <Route path="/nurses" element={<Nurses />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/help" element={<Help />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AppShell>
           </ProtectedRoute>
         }
       />

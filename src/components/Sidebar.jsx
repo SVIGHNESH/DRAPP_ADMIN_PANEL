@@ -1,86 +1,97 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  ChevronLeft, ChevronRight, Heart, Menu, X, LayoutDashboard,
-  Calendar, Stethoscope, Activity,
-  HelpCircle, LogOut, ChevronRight as ChevronRightIcon
+  Heart, LayoutDashboard, Calendar, Stethoscope, Activity, HelpCircle,
 } from 'lucide-react'
+
 import { sidebarLinks, sidebarSettings } from '../data/mockData'
-import { useAuth } from '../context/useAuth'
+import UserMenu from './UserMenu'
+import { cn } from '@/lib/utils'
 
 const iconMap = {
   LayoutDashboard, Calendar, Stethoscope,
-  Activity, HelpCircle
+  Activity, HelpCircle,
 }
 
-const Sidebar = ({ isOpen, setIsOpen }) => {
-  const location = useLocation()
-  const { logout } = useAuth()
-  const isActive = (path) => location.pathname === path
+/**
+ * 240px, fixed, and it does not collapse.
+ *
+ * tickets/T04-app-shell-design.md killed the 288/80px collapse: it cost a
+ * useState in App.jsx, a margin swing on the content column, and a second set
+ * of layout rules inside every element in here, and it bought a 208px
+ * reclaimed on a layout whose content is already capped at max-w-7xl.
+ *
+ * The active item carries one signal, not the four it used to: a sunken fill
+ * with full-strength text. No accent tint, no left border, no chevron.
+ */
+const NavItem = ({ link, active }) => {
+  const Icon = iconMap[link.icon]
+  return (
+    <Link
+      to={link.path}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'flex h-7 items-center gap-2 rounded-md px-2 text-sm transition-colors outline-none',
+        'focus-visible:ring-2 focus-visible:ring-ring',
+        active
+          ? 'bg-surface-sunken font-medium text-fg'
+          : 'text-fg-secondary hover:bg-surface-hover hover:text-fg'
+      )}
+    >
+      {Icon && <Icon size={15} className="shrink-0" />}
+      <span className="truncate">{link.name}</span>
+    </Link>
+  )
+}
 
-  const renderLink = (link) => {
-    const Icon = iconMap[link.icon]
-    const active = isActive(link.path)
-    return (
-      <Link key={link.name} to={link.path} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active ? 'bg-dark-800 text-accent-cyan border-l-2 border-accent-cyan' : 'text-dark-400 hover:bg-dark-800 hover:text-dark-200'} ${!isOpen ? 'justify-center px-2' : ''}`}>
-        <Icon size={20} />
-        {isOpen && <span className="font-medium text-sm">{link.name}</span>}
-        {active && isOpen && <ChevronRightIcon size={16} className="ml-auto" />}
-      </Link>
-    )
-  }
+const NavSection = ({ label, links, isActive }) => (
+  <div>
+    <p className="mb-1 px-2 text-2xs font-medium tracking-wide text-fg-muted uppercase">{label}</p>
+    <div className="flex flex-col gap-0.5">
+      {links.map((link) => (
+        <NavItem key={link.name} link={link} active={isActive(link.path)} />
+      ))}
+    </div>
+  </div>
+)
+
+const Sidebar = ({ mobileOpen, onClose }) => {
+  const location = useLocation()
+  const isActive = (path) => location.pathname === path
 
   return (
     <>
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setIsOpen(false)} />
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden dark:bg-black/60"
+          onClick={onClose}
+          aria-hidden="true"
+        />
       )}
 
-      <aside className={`fixed left-0 top-0 h-full bg-dark-900 border-r border-dark-700 z-50 transition-all duration-300 flex flex-col ${isOpen ? 'w-72' : 'w-20'} ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        {/* Logo */}
-        <div className={`h-20 flex items-center px-6 ${isOpen ? 'justify-between' : 'justify-center'}`}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-accent-cyan to-accent-teal rounded-xl flex items-center justify-center">
-              <Heart className="text-dark-900" size={20} />
-            </div>
-            {isOpen && <h1 className="text-xl font-bold text-dark-100">LifeCare</h1>}
-          </div>
-          <button onClick={() => setIsOpen(!isOpen)} className="hidden lg:flex p-1.5 rounded-lg hover:bg-dark-700 text-dark-400">
-            {isOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-          </button>
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-border bg-canvas',
+          'transition-transform duration-200 ease-out lg:translate-x-0',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        <div className="flex h-12 shrink-0 items-center gap-2 px-3">
+          <span className="flex size-5 items-center justify-center rounded-xs bg-accent-brand">
+            <Heart size={12} className="text-accent-brand-fg" fill="currentColor" />
+          </span>
+          <span className="text-sm font-semibold text-fg">LifeCare</span>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-6 overflow-y-auto">
-          <div>
-            {isOpen && <p className="px-4 text-xs font-semibold text-dark-500 uppercase mb-3">General</p>}
-            <div className="space-y-1">
-              {sidebarLinks.map(renderLink)}
-            </div>
-          </div>
-
-          <div>
-            {isOpen && <p className="px-4 text-xs font-semibold text-dark-500 uppercase mb-3">Settings</p>}
-            <div className="space-y-1">
-              {sidebarSettings.map(renderLink)}
-            </div>
-          </div>
+        <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-2 py-2">
+          <NavSection label="General" links={sidebarLinks} isActive={isActive} />
+          <NavSection label="Settings" links={sidebarSettings} isActive={isActive} />
         </nav>
 
-        <div className="p-4 border-t border-dark-700">
-          <button
-            onClick={() => logout()}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-500/10 transition"
-          >
-            <LogOut size={20} />
-            {isOpen && <span className="font-medium">Sign Out</span>}
-          </button>
+        <div className="shrink-0 border-t border-border p-2">
+          <UserMenu />
         </div>
       </aside>
-
-      <button onClick={() => setIsOpen(!isOpen)} className="fixed top-4 left-4 z-50 lg:hidden p-2 bg-dark-800 rounded-lg border border-dark-700 text-dark-200">
-        {isOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
     </>
   )
 }

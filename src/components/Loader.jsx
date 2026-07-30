@@ -1,9 +1,17 @@
-const Loader = () => {
-  return (
-    <div className="flex justify-center items-center h-64">
-      <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  );
-};
+import React from 'react'
 
-export default Loader;
+/**
+ * The one loading state a skeleton cannot serve: ProtectedRoute's auth check,
+ * where there is no layout yet to imitate. Every in-page load uses Skeleton.
+ */
+const Loader = () => (
+  <div className="flex min-h-[60vh] items-center justify-center">
+    <span
+      role="status"
+      aria-label="Loading"
+      className="size-5 animate-spin rounded-full border-2 border-border-strong border-t-accent-brand"
+    />
+  </div>
+)
+
+export default Loader

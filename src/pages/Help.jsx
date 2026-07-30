@@ -1,129 +1,53 @@
-// import React from 'react'
-// // import { Phone, Mail, MessageCircle, LifeBuoy, ChevronDown } from 'lucide-react'
-// import { Phone, Mail, MessageCircle } from "lucide-react";
+import React from "react"
+import { Mail, Phone } from "lucide-react"
 
-// // const faqs = [
-// //   { q: 'How do I book a nurse for a user?', a: 'Go to the Bookings page and click "New Booking", then select a user and an available nurse.' },
-// //   { q: 'How can I track a nurse\u2019s live location?', a: 'Open the Nurses page and click "Track Location" on any nurse card to see their last known location.' },
-// //   { q: 'How do I contact a nurse directly?', a: 'Use the Call or Email buttons on the nurse card in the Nurses page.' },
-// // ]
+import PageHeader from "../components/PageHeader"
+import { Card } from "@/components/ui/card"
 
-// const Help = () => {
-//   return (
-//     <div className="space-y-6">
-//       <div><h1 className="page-title">Help & Support</h1><p className="text-dark-500 mt-1">We're here to help you anytime</p></div>
+// The two contact routes. The 60 lines of commented-out earlier drafts that
+// used to sit above this, including a live-chat card wired to nothing and a
+// FAQ block referencing a location-tracking feature that does not exist, are
+// gone. So is the newline that had crept inside the mailto href, which made
+// the link resolve to "rbcetsdc@rbmi.in%0A".
+const channels = [
+  {
+    icon: Phone,
+    title: "Support Contact Number",
+    description: "Call us anytime for urgent help",
+    value: "+919690647600",
+    href: "tel:+919690647600",
+  },
+  {
+    icon: Mail,
+    title: "Email Support",
+    description: "Get a response within 24 hours",
+    value: "rbcetsdc@rbmi.in",
+    href: "mailto:rbcetsdc@rbmi.in",
+  },
+]
 
-//       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-//         <div className="card p-6 lg:col-span-1">
-//           <div className="w-12 h-12 rounded-xl bg-accent-cyan/15 flex items-center justify-center mb-4">
-//             <Phone size={22} className="text-accent-cyan" />
-//           </div>
-//           <h3 className="section-title mb-1">Support Contact Number</h3>
-//           <p className="text-sm text-dark-500 mb-3">Call us anytime for urgent help</p>
-//           <a href="tel:+911234567890" className="text-2xl font-bold text-accent-cyan hover:underline">+91 12345 67890</a>
-//           <p className="text-xs text-dark-500 mt-2">Replace this with your actual SDC support number</p>
-//         </div>
+const Help = () => (
+  <>
+    <PageHeader title="Help & Support" description="We are here to help you anytime" />
 
-//         <div className="card p-6 lg:col-span-1">
-//           <div className="w-12 h-12 rounded-xl bg-accent-teal/15 flex items-center justify-center mb-4">
-//             <Mail size={22} className="text-accent-teal" />
-//           </div>
-//           <h3 className="section-title mb-1">Email Support</h3>
-//           <p className="text-sm text-dark-500 mb-3">Get a response within 24 hours</p>
-//           <a href="mailto:support@carenest.app" className="text-lg font-semibold text-accent-teal hover:underline">support@carenest.app</a>
-//         </div>
-
-//         <div className="card p-6 lg:col-span-1">
-//           <div className="w-12 h-12 rounded-xl bg-accent-amber/15 flex items-center justify-center mb-4">
-//             <MessageCircle size={22} className="text-accent-amber" />
-//           </div>
-//           <h3 className="section-title mb-1">Live Chat</h3>
-//           <p className="text-sm text-dark-500 mb-3">Chat with our support team</p>
-//           <button className="btn-primary">Start Chat</button>
-//         </div>
-//       </div>
-
-//       {/* <div className="card p-6">
-//         <div className="flex items-center gap-2 mb-6">
-//           <LifeBuoy size={20} className="text-accent-cyan" />
-//           <h3 className="section-title">Frequently Asked Questions</h3>
-//         </div>
-//         <div className="space-y-3">
-//           {faqs.map((item, i) => (
-//             <details key={i} className="bg-dark-800/50 rounded-xl p-4 border border-dark-700/50 group">
-//               <summary className="flex items-center justify-between cursor-pointer text-dark-200 font-medium list-none">
-//                 {item.q}
-//                 <ChevronDown size={16} className="text-dark-500 group-open:rotate-180 transition-transform" />
-//               </summary>
-//               <p className="text-sm text-dark-500 mt-3">{item.a}</p>
-//             </details>
-//           ))}
-//         </div>
-//       </div>
-//     </div>
-//   )
-// } */}
-
-// export default Help
-
-import React from "react";
-import { Phone, Mail } from "lucide-react";
-
-const Help = () => {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="page-title">Help & Support</h1>
-        <p className="text-dark-500 mt-1">
-          We are here to help you anytime
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Support Number */}
-        <div className="card p-6">
-          <div className="w-12 h-12 rounded-xl bg-accent-cyan/15 flex items-center justify-center mb-4">
-            <Phone size={22} className="text-accent-cyan" />
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {channels.map(({ icon: Icon, title, description, value, href }) => (
+        <Card key={title} className="p-4">
+          <div className="flex items-center gap-2 text-fg-muted">
+            <Icon size={14} className="shrink-0" />
+            <h2 className="text-xs font-medium">{title}</h2>
           </div>
-
-          <h3 className="section-title mb-1">Support Contact Number</h3>
-          <p className="text-sm text-dark-500 mb-3">
-            Call us anytime for urgent help
-          </p>
-
           <a
-            href="tel:+919690647600"
-            className="text-2xl font-bold text-accent-cyan hover:underline"
+            href={href}
+            className="mt-2 inline-block rounded-xs text-lg font-medium text-accent-text outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
           >
-            +919690647600
+            {value}
           </a>
-
-          <p className="text-xs text-dark-500 mt-2">
-          </p>
-        </div>
-
-        {/* Email Support */}
-        <div className="card p-6">
-          <div className="w-12 h-12 rounded-xl bg-accent-teal/15 flex items-center justify-center mb-4">
-            <Mail size={22} className="text-accent-teal" />
-          </div>
-
-          <h3 className="section-title mb-1">Email Support</h3>
-          <p className="text-sm text-dark-500 mb-3">
-            Get a response within 24 hours
-          </p>
-
-          <a
-            href="mailto:rbcetsdc@rbmi.in
-"
-            className="text-lg font-semibold text-accent-teal hover:underline"
-          >
-            rbcetsdc@rbmi.in
-          </a>
-        </div>
-      </div>
+          <p className="mt-1 text-xs text-fg-muted">{description}</p>
+        </Card>
+      ))}
     </div>
-  );
-};
+  </>
+)
 
-export default Help;
+export default Help

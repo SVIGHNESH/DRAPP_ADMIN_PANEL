@@ -1,9 +1,14 @@
 import React, { useState } from "react"
 import { Link } from "react-router-dom"
-import { Heart, ArrowLeft, Loader } from "lucide-react"
+import { ArrowLeft, Loader2 } from "lucide-react"
+import toast from "react-hot-toast"
+
 import { forgotPassword } from "../api/auth"
 import { getErrorMessage } from "../utils/apiError"
-import toast from "react-hot-toast"
+import AuthLayout from "../components/AuthLayout"
+import { Button } from "@/components/ui/button"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("")
@@ -25,50 +30,49 @@ const ForgotPassword = () => {
   }
 
   return (
-    <div className="min-h-screen bg-dark-900 flex items-center justify-center p-4">
-      <div className="card w-full max-w-md p-8">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-accent-cyan to-accent-teal rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Heart className="text-dark-900" size={32} />
-          </div>
-          <h1 className="text-2xl font-bold text-dark-100">Reset Password</h1>
-          <p className="text-dark-500 mt-1">Enter your email to receive a reset link</p>
-        </div>
-
-        {sent ? (
-          <div className="text-center space-y-4">
-            <p className="text-dark-300">If an account with that email exists, a reset link has been sent.</p>
-            <Link to="/login" className="btn-primary inline-flex items-center gap-2">
-              <ArrowLeft size={16} /> Back to Login
+    <AuthLayout title="Reset password" description="Enter your email to receive a reset link">
+      {sent ? (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-fg-secondary">
+            If an account with that email exists, a reset link has been sent.
+          </p>
+          <Button asChild variant="outline" className="w-full">
+            <Link to="/login">
+              <ArrowLeft /> Back to login
             </Link>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm text-dark-500 mb-2">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
-                className="input-field"
-                required
-                autoFocus
-              />
-            </div>
-            <button type="submit" disabled={submitting} className="btn-primary w-full flex items-center justify-center gap-2">
-              {submitting ? <Loader size={18} className="animate-spin" /> : null}
-              {submitting ? "Sending..." : "Send Reset Link"}
-            </button>
-            <div className="text-center">
-              <Link to="/login" className="text-sm text-accent-cyan hover:underline inline-flex items-center gap-1">
-                <ArrowLeft size={14} /> Back to Login
-              </Link>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Field>
+            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@example.com"
+              required
+              autoFocus
+            />
+          </Field>
+
+          <Button type="submit" disabled={submitting} className="mt-1 w-full">
+            {submitting && <Loader2 className="animate-spin" />}
+            {submitting ? "Sending..." : "Send reset link"}
+          </Button>
+
+          <Link
+            to="/login"
+            className="inline-flex items-center justify-center gap-1 rounded-xs text-xs text-fg-muted outline-none hover:text-fg focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ArrowLeft size={13} /> Back to login
+          </Link>
+        </form>
+      )}
+    </AuthLayout>
   )
 }
 

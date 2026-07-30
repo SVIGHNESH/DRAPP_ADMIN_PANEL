@@ -51,6 +51,16 @@ export default [
     },
   },
   {
+    // shadcn/ui primitives are vendored, not hand-written, and every one of them
+    // exports its cva variants beside the component. Fast refresh is the only
+    // thing that objects, and these files are not the ones being edited in a
+    // dev loop. Every other rule still applies to them.
+    files: ['src/components/ui/**/*.{js,jsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
     ignores: ['dist/**', 'node_modules/**'],
   },
 ]

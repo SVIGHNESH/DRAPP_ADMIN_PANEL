@@ -36,28 +36,40 @@ export const BACKEND_STATUS_MAP = {
   cancelled: "cancelled",
 }
 
-export const getStatusColor = (status) => {
-  const colors = {
-    confirmed: "bg-emerald-500/15 text-emerald-400",
-    "in-progress": "bg-cyan-500/15 text-cyan-400",
-    pending: "bg-amber-500/15 text-amber-400",
-    "awaiting-payment": "bg-violet-500/15 text-violet-400",
-    cancelled: "bg-rose-500/15 text-rose-400",
-    completed: "bg-dark-600 text-dark-400",
-    active: "bg-emerald-500/15 text-emerald-400",
-    "on-leave": "bg-amber-500/15 text-amber-400",
-    stable: "bg-emerald-500/15 text-emerald-400",
-    critical: "bg-rose-500/15 text-rose-400",
-    observation: "bg-cyan-500/15 text-cyan-400",
+/**
+ * A status resolves to a tone, not to a pair of Tailwind classes.
+ *
+ * tickets/T03-token-set.md settled five hues across all eleven states, and
+ * settled that a status reads as neutral text beside a coloured dot rather
+ * than as a tinted pill: a pill forces its own text down to roughly 4.2:1 and
+ * light-theme amber bottoms out at 3.71:1, while a dot only has to clear 3:1.
+ * StatusBadge owns the rendering; this file only names the hue.
+ *
+ * "completed" is deliberately toneless. It is the resting state of most rows
+ * and should not compete with the ones that need attention.
+ */
+export const getStatusTone = (status) => {
+  const tones = {
+    confirmed: "success",
+    "in-progress": "info",
+    pending: "warning",
+    "awaiting-payment": "special",
+    cancelled: "danger",
+    completed: "neutral",
+    active: "success",
+    "on-leave": "warning",
+    stable: "success",
+    critical: "danger",
+    observation: "info",
   }
-  return colors[status] || "bg-dark-600 text-dark-400"
+  return tones[status] || "neutral"
 }
 
-export const getPaymentStatusColor = (status) => {
-  const colors = {
-    completed: "bg-emerald-500/15 text-emerald-400",
-    pending: "bg-amber-500/15 text-amber-400",
-    failed: "bg-rose-500/15 text-rose-400",
+export const getPaymentStatusTone = (status) => {
+  const tones = {
+    completed: "success",
+    pending: "warning",
+    failed: "danger",
   }
-  return colors[status] || "bg-dark-600 text-dark-400"
+  return tones[status] || "neutral"
 }
