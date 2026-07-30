@@ -1,6 +1,9 @@
 import api from "./api"
 
-export const getBookings = () => api.get("/bookings")
+// Bookings in "pending_payment" (abandoned/unfinished checkouts, and any
+// admin-created booking before it is confirmed) are excluded unless asked for.
+export const getBookings = (includePending = false) =>
+  api.get("/bookings", { params: includePending ? { include_pending: true } : {} })
 
 export const getBooking = (id) => api.get(`/bookings/${id}`)
 

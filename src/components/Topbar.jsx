@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Bell, Sun, Moon, ChevronDown, LogOut } from 'lucide-react'
-import { useTheme } from '../context/ThemeContext'
-import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/useTheme'
+import { useAuth } from '../context/useAuth'
 
 const Topbar = () => {
   const { darkMode, toggleTheme } = useTheme()

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react"
-import { Search, Plus, X, AlertTriangle, ChevronLeft, ChevronRight, Power, PowerOff, Edit3 } from 'lucide-react'
-import { getServices, createService, updateService, deleteService } from '../api/services'
+import { Search, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { getServices, createService } from '../api/services'
 import { getErrorMessage } from '../utils/apiError'
 import toast from "react-hot-toast"
 
@@ -13,8 +13,6 @@ const Services = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [editTarget, setEditTarget] = useState(null)
-  const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState({ name: '', description: '', base_price: '' })
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -55,22 +53,16 @@ const Services = () => {
     try {
       const payload = {
         name: form.name.trim(),
-        description: form.description.trim(),
+        description: form.description.trim() || null,
         base_price: parseFloat(form.base_price) || 0,
         active: true,
       }
 
-      if (editTarget) {
-        await updateService(editTarget.service_id, payload)
-        toast.success("Service updated")
-      } else {
-        await createService(payload)
-        toast.success("Service created")
-      }
+      await createService(payload)
+      toast.success("Service created")
 
       resetForm()
       setShowAddModal(false)
-      setEditTarget(null)
       await loadData()
     } catch (err) {
       toast.error(getErrorMessage(err))
@@ -79,41 +71,8 @@ const Services = () => {
     }
   }
 
-  const openEdit = (service) => {
-    setEditTarget(service)
-    setForm({
-      name: service.name,
-      description: service.description || '',
-      base_price: service.base_price?.toString() || '',
-    })
-    setShowAddModal(true)
-  }
-
-  const handleToggleActive = async (service) => {
-    try {
-      await updateService(service.service_id, { active: !service.active })
-      toast.success(service.active ? "Service deactivated" : "Service activated")
-      await loadData()
-    } catch (err) {
-      toast.error(getErrorMessage(err))
-    }
-  }
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return
-    try {
-      await deleteService(deleteTarget.service_id)
-      toast.success("Service deleted")
-      setDeleteTarget(null)
-      await loadData()
-    } catch (err) {
-      toast.error(getErrorMessage(err))
-    }
-  }
-
   const openAdd = () => {
     resetForm()
-    setEditTarget(null)
     setShowAddModal(true)
   }
 
@@ -126,7 +85,7 @@ const Services = () => {
         <div>
           <h1 className="page-title">Services</h1>
           <p className="text-dark-500 mt-1">
-            Manage healthcare services offered to patients.
+            Healthcare services offered to patients. Services can be added but not edited or removed.
           </p>
         </div>
         <button onClick={openAdd} className="btn-primary flex items-center gap-2">
@@ -152,26 +111,8 @@ const Services = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginated.map((service) => (
               <div key={service.service_id} className="card p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent-cyan to-accent-teal flex items-center justify-center text-dark-900 text-xl font-bold">
-                    {service.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => openEdit(service)}
-                      className="p-1.5 rounded-lg hover:bg-dark-800 text-dark-500 hover:text-accent-cyan"
-                      title="Edit service"
-                    >
-                      <Edit3 size={16} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteTarget(service)}
-                      className="p-1.5 rounded-lg hover:bg-rose-500/10 text-dark-500 hover:text-rose-400"
-                      title="Delete service"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent-cyan to-accent-teal flex items-center justify-center text-dark-900 text-xl font-bold mb-4">
+                  {service.name.charAt(0).toUpperCase()}
                 </div>
 
                 <h3 className="font-bold text-dark-100 text-lg mb-1">{service.name}</h3>
@@ -182,18 +123,9 @@ const Services = () => {
                 <div className="flex items-center justify-between pt-4 border-t border-dark-700">
                   <span className="text-lg font-bold text-accent-cyan">
                     ₹{service.base_price}
+                    <span className="text-xs font-normal text-dark-500"> /hour</span>
                   </span>
-                  <button
-                    onClick={() => handleToggleActive(service)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                      service.active
-                        ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-                        : 'bg-dark-700 text-dark-400 hover:bg-dark-600'
-                    }`}
-                  >
-                    {service.active ? <Power size={14} /> : <PowerOff size={14} />}
-                    {service.active ? 'Active' : 'Inactive'}
-                  </button>
+                  <span className="badge bg-emerald-500/10 text-emerald-400">Active</span>
                 </div>
               </div>
             ))}
@@ -231,13 +163,13 @@ const Services = () => {
         </>
       )}
 
-      {/* Add / Edit Service Modal */}
+      {/* Add Service Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => { setShowAddModal(false); setEditTarget(null) }}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowAddModal(false)}>
           <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-dark-700">
-              <h3 className="font-bold text-dark-100 text-lg">{editTarget ? 'Edit Service' : 'Add Service'}</h3>
-              <button onClick={() => { setShowAddModal(false); setEditTarget(null) }} className="p-2 rounded-lg hover:bg-dark-800 text-dark-400">
+              <h3 className="font-bold text-dark-100 text-lg">Add Service</h3>
+              <button onClick={() => setShowAddModal(false)} className="p-2 rounded-lg hover:bg-dark-800 text-dark-400">
                 <X size={18} />
               </button>
             </div>
@@ -263,7 +195,7 @@ const Services = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm text-dark-500 mb-2">Base Price (₹)</label>
+                <label className="block text-sm text-dark-500 mb-2">Base Price (₹ per hour)</label>
                 <input
                   type="number"
                   min="0"
@@ -280,30 +212,9 @@ const Services = () => {
                 disabled={submitting}
                 className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {submitting ? 'Saving...' : (editTarget ? 'Update Service' : 'Create Service')}
+                {submitting ? 'Saving...' : 'Create Service'}
               </button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirm Modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setDeleteTarget(null)}>
-          <div className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 text-center">
-              <div className="w-14 h-14 rounded-full bg-rose-500/15 flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle size={26} className="text-rose-400" />
-              </div>
-              <h3 className="font-bold text-dark-100 text-lg mb-1">Delete Service?</h3>
-              <p className="text-sm text-dark-500 mb-6">
-                Remove <span className="text-dark-300 font-medium">{deleteTarget.name}</span> permanently?
-              </p>
-              <div className="flex items-center gap-3">
-                <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2.5 bg-dark-800 hover:bg-dark-700 rounded-xl text-sm text-dark-300 font-medium">Cancel</button>
-                <button onClick={handleDelete} className="flex-1 py-2.5 bg-rose-500 hover:bg-rose-600 rounded-xl text-sm text-white font-medium">Delete</button>
-              </div>
-            </div>
           </div>
         </div>
       )}

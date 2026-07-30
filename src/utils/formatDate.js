@@ -14,6 +14,15 @@ export function formatDate(isoString) {
   return { date, time }
 }
 
+// "2026-07-28" in local time, as expected by date-path API params
+export function toDateParam(isoString) {
+  if (!isoString) return null
+  const d = new Date(isoString)
+  if (Number.isNaN(d.getTime())) return null
+  const pad = (n) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 export function formatSlotRange(startIso, endIso) {
   const start = formatDate(startIso)
   const end = formatDate(endIso)

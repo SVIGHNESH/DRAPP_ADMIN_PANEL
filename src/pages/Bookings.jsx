@@ -3,12 +3,16 @@ import {
   Search, Plus, Calendar, Clock, X, ChevronLeft, ChevronRight,
   User, MessageSquare, CheckCircle, Loader as LoaderIcon
 } from 'lucide-react'
-import { STATUS_LIST, UI_STATUS_MAP, BACKEND_STATUS_MAP } from '../constants/status'
+import {
+  STATUS_LIST, ADMIN_SETTABLE_STATUSES, UI_STATUS_MAP, BACKEND_STATUS_MAP,
+  getPaymentStatusColor,
+} from '../constants/status'
 import { getBookings as apiGetBookings, createBooking, confirmBooking, updateBookingStatus, addBookingNote } from '../api/bookings'
 import { getServices } from '../api/services'
+import { getNurses, getAvailableNurses } from '../api/nurses'
 import { toUiBooking, buildServiceMap } from '../adapters/booking'
 import { getErrorMessage } from '../utils/apiError'
-import { getAllKnownNurses } from '../utils/localNurses'
+import { toDateParam } from '../utils/formatDate'
 import toast from "react-hot-toast"
 
 import Loader from "../components/Loader"
@@ -16,21 +20,31 @@ import ErrorState from "../components/ErrorState"
 import EmptyState from "../components/EmptyState"
 
 const emptyForm = { service_id: '', slot_start: '', slot_end: '', custom_address: '', notes: '' }
+const emptyAvailability = { loading: false, list: null, error: null, date: null }
+const emptyConfirmForm = { nurse_id: null, nurse_name: '', nurse_contact: '' }
+
+// The backend allows confirming from pending_payment, requested and confirmed.
+const canConfirm = (status) =>
+  status === 'awaiting-payment' || status === 'pending' || status === 'confirmed'
 
 const Bookings = () => {
   const [bookings, setBookings] = useState([])
   const [services, setServices] = useState([])
+  const [nurses, setNurses] = useState([])
+  const [availability, setAvailability] = useState(emptyAvailability)
+  const [manualNurse, setManualNurse] = useState(false)
   const [serviceMap, setServiceMap] = useState(new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [showPending, setShowPending] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState(emptyForm)
-  const [confirmForm, setConfirmForm] = useState({ nurse_name: '', nurse_contact: '' })
+  const [confirmForm, setConfirmForm] = useState(emptyConfirmForm)
   const [noteText, setNoteText] = useState('')
 
   const itemsPerPage = 6
@@ -40,7 +54,7 @@ const Bookings = () => {
     setError(null)
     try {
       const [bookRes, svcRes] = await Promise.all([
-        apiGetBookings(),
+        apiGetBookings(showPending),
         getServices(),
       ])
       const svcData = svcRes.data || []
@@ -49,12 +63,21 @@ const Bookings = () => {
       setServiceMap(sm)
       const mapped = (bookRes.data || []).map((b) => toUiBooking(b, sm))
       setBookings(mapped)
+
+      // Roster is only needed as a fallback for the assign-nurse picker, so a
+      // failure here must not block the bookings table.
+      try {
+        const nurseRes = await getNurses()
+        setNurses((nurseRes.data || []).filter((n) => n.is_active))
+      } catch {
+        setNurses([])
+      }
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [showPending])
 
   useEffect(() => {
     loadData()
@@ -64,6 +87,67 @@ const Bookings = () => {
     const updated = toUiBooking(rawBooking, serviceMap)
     setBookings((prev) => prev.map((b) => (b.id === rawBooking.booking_id ? updated : b)))
     return updated
+  }
+
+  const loadAvailability = async (booking) => {
+    const dateStr = toDateParam(booking.slotStart)
+    if (!dateStr) {
+      setAvailability(emptyAvailability)
+      return
+    }
+    setAvailability({ loading: true, list: null, error: null, date: dateStr })
+    try {
+      // Pass the exact slot: without it the backend treats the whole day as
+      // the window and hides any nurse with a single booking that day.
+      const res = await getAvailableNurses(dateStr, booking.slotStart, booking.slotEnd)
+      setAvailability({ loading: false, list: res.data || [], error: null, date: dateStr })
+    } catch (err) {
+      setAvailability({ loading: false, list: null, error: getErrorMessage(err), date: dateStr })
+    }
+  }
+
+  const openDetail = (booking) => {
+    setShowDetailModal(booking)
+    setConfirmForm(emptyConfirmForm)
+    setManualNurse(false)
+    setAvailability(emptyAvailability)
+    if (canConfirm(booking.status)) {
+      loadAvailability(booking)
+    }
+  }
+
+  const closeDetail = () => {
+    setShowDetailModal(null)
+    setNoteText('')
+    setAvailability(emptyAvailability)
+    setManualNurse(false)
+  }
+
+  // Availability is the source of truth for who can take the slot; the full
+  // active roster is the fallback when that lookup is unavailable.
+  const nurseOptions =
+    availability.list ??
+    nurses.map((n) => ({
+      nurse_id: n.nurse_id,
+      nurse_name: n.name,
+      phone: n.phone,
+      specialization: n.specialization,
+      experience_years: n.experience_years,
+    }))
+
+  const handleSelectNurse = (nurseId) => {
+    if (nurseId === '__manual__') {
+      setManualNurse(true)
+      setConfirmForm(emptyConfirmForm)
+      return
+    }
+    setManualNurse(false)
+    const nurse = nurseOptions.find((n) => String(n.nurse_id) === nurseId)
+    setConfirmForm({
+      nurse_id: nurse?.nurse_id ?? null,
+      nurse_name: nurse?.nurse_name || '',
+      nurse_contact: nurse?.phone || '',
+    })
   }
 
   const filtered = bookings.filter((b) => {
@@ -98,12 +182,15 @@ const Bookings = () => {
         notes: form.notes || undefined,
       }
       const res = await createBooking(payload)
-      toast.success("Booking created")
+      toast.success("Booking created - it starts as awaiting payment until confirmed")
       setShowAddModal(false)
       setForm(emptyForm)
       const newBooking = toUiBooking(res.data, serviceMap)
       setBookings((prev) => [newBooking, ...prev])
       setCurrentPage(1)
+      // A new booking starts as pending_payment, which the default listing
+      // hides; switch the pending filter on so it survives a reload.
+      setShowPending(true)
     } catch (err) {
       toast.error(getErrorMessage(err))
     } finally {
@@ -112,19 +199,33 @@ const Bookings = () => {
   }
 
   const handleConfirm = async (bookingId) => {
-    if (!confirmForm.nurse_name) {
-      toast.error("Nurse name is required")
+    if (!confirmForm.nurse_id && !confirmForm.nurse_name.trim()) {
+      toast.error("Select a nurse or enter a name")
       return
     }
     setSubmitting(true)
     try {
-      const res = await confirmBooking(bookingId, confirmForm)
+      // nurse_id links the assignment to the nurse row, which is what makes
+      // the backend's overlap checks see the slot as taken. nurse_name is
+      // sent alongside it because older backend deployments require it (they
+      // predate nurse_id and would 422 without a name).
+      const payload = {
+        ...(confirmForm.nurse_id ? { nurse_id: confirmForm.nurse_id } : {}),
+        nurse_name: confirmForm.nurse_name.trim(),
+        nurse_contact: confirmForm.nurse_contact.trim() || undefined,
+      }
+      const res = await confirmBooking(bookingId, payload)
       updateBookingInList(res.data)
-      setShowDetailModal(null)
-      setConfirmForm({ nurse_name: '', nurse_contact: '' })
+      closeDetail()
+      setConfirmForm(emptyConfirmForm)
       toast.success("Booking confirmed")
     } catch (err) {
       toast.error(getErrorMessage(err))
+      // A 409 means the nurse was booked meanwhile; refresh the picker.
+      if (err.response?.status === 409 && showDetailModal) {
+        setConfirmForm(emptyConfirmForm)
+        loadAvailability(showDetailModal)
+      }
     } finally {
       setSubmitting(false)
     }
@@ -162,8 +263,6 @@ const Bookings = () => {
   if (loading) return <Loader />
   if (error) return <ErrorState message={error} onRetry={loadData} />
 
-  const canConfirm = (status) => status === 'pending' || status === 'confirmed'
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -189,7 +288,16 @@ const Bookings = () => {
             />
           </div>
           <div className="flex items-center gap-3">
-            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1) }} className="input-field w-40">
+            <label className="flex items-center gap-2 text-sm text-dark-400 whitespace-nowrap cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showPending}
+                onChange={(e) => { setShowPending(e.target.checked); setCurrentPage(1) }}
+                className="accent-accent-cyan"
+              />
+              Show awaiting payment
+            </label>
+            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1) }} className="input-field w-44">
               <option value="all">All Status</option>
               {STATUS_LIST.map((s) => (
                 <option key={s} value={UI_STATUS_MAP[s]}>{UI_STATUS_MAP[s]}</option>
@@ -214,7 +322,7 @@ const Bookings = () => {
                 <tr
                   key={b.id}
                   className="border-b border-dark-700/50 hover:bg-dark-800/30 cursor-pointer"
-                  onClick={() => setShowDetailModal(b)}
+                  onClick={() => openDetail(b)}
                 >
                   <td className="table-cell">
                     <div className="flex items-center gap-3">
@@ -223,7 +331,7 @@ const Bookings = () => {
                       </div>
                       <div>
                         <p className="font-medium text-dark-200">{b.userName}</p>
-                        <p className="text-xs text-dark-500">#{b.userId}</p>
+                        <p className="text-xs text-dark-500">{b.userEmail || `#${b.userId}`}</p>
                       </div>
                     </div>
                   </td>
@@ -296,7 +404,7 @@ const Bookings = () => {
       {showDetailModal && (
         <div
           className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-          onClick={() => { setShowDetailModal(null); setNoteText('') }}
+          onClick={closeDetail}
         >
           <div
             className="bg-dark-900 border border-dark-700 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
@@ -307,7 +415,7 @@ const Bookings = () => {
                 Booking #{showDetailModal.bookingId}
               </h3>
               <button
-                onClick={() => { setShowDetailModal(null); setNoteText('') }}
+                onClick={closeDetail}
                 className="p-2 rounded-lg hover:bg-dark-800 text-dark-400"
               >
                 <X size={18} />
@@ -317,8 +425,11 @@ const Bookings = () => {
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-dark-800/50 rounded-xl p-3">
-                  <p className="text-xs text-dark-500 mb-1">User</p>
+                  <p className="text-xs text-dark-500 mb-1">Booked by</p>
                   <p className="text-sm font-medium text-dark-200">{showDetailModal.userName}</p>
+                  {showDetailModal.userEmail && (
+                    <p className="text-xs text-dark-500 truncate">{showDetailModal.userEmail}</p>
+                  )}
                 </div>
                 <div className="bg-dark-800/50 rounded-xl p-3">
                   <p className="text-xs text-dark-500 mb-1">Status</p>
@@ -329,10 +440,33 @@ const Bookings = () => {
                   <p className="text-sm text-dark-200">{showDetailModal.careType}</p>
                 </div>
                 <div className="bg-dark-800/50 rounded-xl p-3">
+                  <p className="text-xs text-dark-500 mb-1">Payment</p>
+                  {showDetailModal.paymentStatus ? (
+                    <span className={`badge ${getPaymentStatusColor(showDetailModal.paymentStatus)}`}>
+                      {showDetailModal.paymentStatus}
+                    </span>
+                  ) : (
+                    <p className="text-sm text-dark-400">No payment yet</p>
+                  )}
+                </div>
+                {showDetailModal.patientName && (
+                  <div className="bg-dark-800/50 rounded-xl p-3 col-span-2">
+                    <p className="text-xs text-dark-500 mb-1">Patient</p>
+                    <p className="text-sm text-dark-200">
+                      {showDetailModal.patientName}
+                      {showDetailModal.patientAge != null && `, ${showDetailModal.patientAge} yrs`}
+                      {showDetailModal.patientSex && ` (${showDetailModal.patientSex})`}
+                    </p>
+                    {showDetailModal.patientCondition && (
+                      <p className="text-xs text-dark-400 mt-1">{showDetailModal.patientCondition}</p>
+                    )}
+                  </div>
+                )}
+                <div className="bg-dark-800/50 rounded-xl p-3">
                   <p className="text-xs text-dark-500 mb-1">Nurse</p>
                   <p className="text-sm text-dark-200">{showDetailModal.nurse}</p>
                 </div>
-                <div className="bg-dark-800/50 rounded-xl p-3 col-span-2">
+                <div className="bg-dark-800/50 rounded-xl p-3">
                   <p className="text-xs text-dark-500 mb-1">Slot</p>
                   <p className="text-sm text-dark-200">{showDetailModal.date} {showDetailModal.time}</p>
                 </div>
@@ -393,30 +527,56 @@ const Bookings = () => {
                 {canConfirm(showDetailModal.status) && (
                   <div className="bg-dark-800/30 rounded-xl p-3 space-y-2">
                     <h4 className="font-semibold text-dark-200 text-sm">Confirm & Assign Nurse</h4>
-                    <div className="relative">
-                      <input
-                        list="known-nurses"
-                        value={confirmForm.nurse_name}
-                        onChange={(e) => {
-                          const name = e.target.value
-                          setConfirmForm((prev) => ({ ...prev, nurse_name: name }))
-                          const match = getAllKnownNurses().find(
-                            (n) => n.name.toLowerCase() === name.toLowerCase()
-                          )
-                          if (match && match.contact && !confirmForm.nurse_contact) {
-                            setConfirmForm((prev) => ({ ...prev, nurse_contact: match.contact }))
-                          }
-                        }}
-                        placeholder="Type or select a nurse"
-                        className="input-field"
-                        disabled={submitting}
-                      />
-                      <datalist id="known-nurses">
-                        {getAllKnownNurses().map((n) => (
-                          <option key={n.id} value={n.name} />
-                        ))}
-                      </datalist>
-                    </div>
+
+                    {availability.loading ? (
+                      <div className="flex items-center gap-2 text-sm text-dark-500 py-2">
+                        <LoaderIcon size={14} className="animate-spin" />
+                        Checking nurse availability for {showDetailModal.date}...
+                      </div>
+                    ) : (
+                      <>
+                        <select
+                          value={manualNurse ? '__manual__' : (confirmForm.nurse_id ?? '')}
+                          onChange={(e) => handleSelectNurse(e.target.value)}
+                          className="input-field"
+                          disabled={submitting}
+                        >
+                          <option value="">Select a nurse</option>
+                          {nurseOptions.map((n) => (
+                            <option key={n.nurse_id} value={n.nurse_id}>
+                              {n.nurse_name}
+                              {n.specialization ? ` - ${n.specialization}` : ''}
+                              {n.experience_years != null ? ` (${n.experience_years}y)` : ''}
+                            </option>
+                          ))}
+                          <option value="__manual__">Enter nurse manually...</option>
+                        </select>
+
+                        {availability.list && (
+                          <p className="text-xs text-dark-500">
+                            {availability.list.length === 0
+                              ? `No nurses free on ${showDetailModal.date}. Assign manually if you have arranged cover.`
+                              : `${availability.list.length} nurse${availability.list.length !== 1 ? 's' : ''} available on ${showDetailModal.date}.`}
+                          </p>
+                        )}
+                        {availability.error && (
+                          <p className="text-xs text-amber-400">
+                            Availability check failed ({availability.error}). Showing all active nurses.
+                          </p>
+                        )}
+
+                        {manualNurse && (
+                          <input
+                            value={confirmForm.nurse_name}
+                            onChange={(e) => setConfirmForm((prev) => ({ ...prev, nurse_name: e.target.value }))}
+                            placeholder="Nurse name"
+                            className="input-field"
+                            disabled={submitting}
+                          />
+                        )}
+                      </>
+                    )}
+
                     <input
                       value={confirmForm.nurse_contact}
                       onChange={(e) => setConfirmForm((prev) => ({ ...prev, nurse_contact: e.target.value }))}
@@ -449,7 +609,12 @@ const Bookings = () => {
                     className="input-field"
                     disabled={submitting}
                   >
-                    {STATUS_LIST.map((s) => (
+                    {/* pending_payment is only listed while the booking is in
+                        it - a checkout state is not something to move back to. */}
+                    {showDetailModal.backendStatus === 'pending_payment' && (
+                      <option value="pending_payment">{UI_STATUS_MAP.pending_payment}</option>
+                    )}
+                    {ADMIN_SETTABLE_STATUSES.map((s) => (
                       <option key={s} value={s}>{UI_STATUS_MAP[s]}</option>
                     ))}
                   </select>

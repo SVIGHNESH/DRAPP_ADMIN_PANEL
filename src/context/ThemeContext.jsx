@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
-
-const ThemeContext = createContext(null)
+import React, { useState, useEffect } from 'react'
+import { ThemeContext } from './useTheme'
 
 export const ThemeProvider = ({ children }) => {
   const [darkMode, setDarkMode] = useState(() => {
@@ -34,10 +33,4 @@ export const ThemeProvider = ({ children }) => {
       {children}
     </ThemeContext.Provider>
   )
-}
-
-export const useTheme = () => {
-  const ctx = useContext(ThemeContext)
-  if (!ctx) throw new Error('useTheme must be used within a ThemeProvider')
-  return ctx
 }

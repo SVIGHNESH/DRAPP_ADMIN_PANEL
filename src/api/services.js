@@ -1,9 +1,7 @@
 import api from "./api"
 
+// The backend only exposes list (active services only) and create.
+// There is no update or delete endpoint for services.
 export const getServices = () => api.get("/services")
 
 export const createService = (data) => api.post("/services", data)
-
-export const updateService = (id, data) => api.put(`/services/${id}`, data)
-
-export const deleteService = (id) => api.delete(`/services/${id}`)

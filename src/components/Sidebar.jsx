@@ -6,7 +6,7 @@ import {
   HelpCircle, LogOut, ChevronRight as ChevronRightIcon
 } from 'lucide-react'
 import { sidebarLinks, sidebarSettings } from '../data/mockData'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 
 const iconMap = {
   LayoutDashboard, Calendar, Stethoscope,

@@ -1,7 +1,7 @@
 import React, { useState } from "react"
 import { Link, Navigate } from "react-router-dom"
 import { Heart, Eye, EyeOff, Loader } from "lucide-react"
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../context/useAuth"
 import { getErrorMessage } from "../utils/apiError"
 import toast from "react-hot-toast"
 

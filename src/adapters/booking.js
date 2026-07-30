@@ -2,12 +2,27 @@ import { UI_STATUS_MAP, getStatusColor } from "../constants/status"
 import { formatSlotRange } from "../utils/formatDate"
 
 export function toUiBooking(bookingOut, serviceMap) {
-  const serviceName = serviceMap.get(bookingOut.service_id)
   const { date, time } = formatSlotRange(bookingOut.slot_start, bookingOut.slot_end)
   const uiStatus = UI_STATUS_MAP[bookingOut.status] || bookingOut.status
-  const userLabel = `User #${bookingOut.user_id}`
-  const initials = userLabel
+
+  // The backend resolves related rows onto BookingOut so the dashboard does
+  // not need a follow-up request per id; the "#id" strings are last resorts.
+  const userName = bookingOut.booked_by_name || `User #${bookingOut.user_id}`
+  const serviceName =
+    bookingOut.service_name ||
+    serviceMap.get(bookingOut.service_id) ||
+    `Service #${bookingOut.service_id}`
+  const savedAddress = [bookingOut.service_address, bookingOut.service_city]
+    .filter(Boolean)
+    .join(", ")
+  const address =
+    bookingOut.custom_address ||
+    savedAddress ||
+    (bookingOut.address_id ? `Saved address #${bookingOut.address_id}` : "No address on record")
+
+  const initials = userName
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
     .join("")
     .toUpperCase()
@@ -16,16 +31,22 @@ export function toUiBooking(bookingOut, serviceMap) {
   return {
     id: bookingOut.booking_id,
     bookingId: bookingOut.booking_id,
-    userName: userLabel,
+    userName,
+    userEmail: bookingOut.booked_by_email || null,
     userId: bookingOut.user_id,
+    patientName: bookingOut.patient_name || bookingOut.member_name || null,
+    patientAge: bookingOut.patient_age ?? null,
+    patientSex: bookingOut.patient_sex || null,
+    patientCondition: bookingOut.patient_condition || null,
+    paymentStatus: bookingOut.payment_status || null,
     nurse: bookingOut.assigned_nurse?.nurse_name || "Unassigned",
     nurseContact: bookingOut.assigned_nurse?.nurse_contact || null,
-    careType: serviceName || `Service #${bookingOut.service_id}`,
+    careType: serviceName,
     date,
     time,
     status: uiStatus,
     statusBadge: getStatusColor(uiStatus),
-    address: bookingOut.custom_address || `Saved address #${bookingOut.address_id}`,
+    address,
     avatar: initials,
     slotStart: bookingOut.slot_start,
     slotEnd: bookingOut.slot_end,
