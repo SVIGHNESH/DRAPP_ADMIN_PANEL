@@ -80,7 +80,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
           <span className="flex size-5 items-center justify-center rounded-xs bg-accent-brand">
             <Heart size={12} className="text-accent-brand-fg" fill="currentColor" />
           </span>
-          <span className="text-sm font-semibold text-fg">LifeCare</span>
+          <span className="text-sm font-semibold text-fg">CareNest</span>
         </div>
 
         <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-2 py-2">

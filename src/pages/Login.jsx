@@ -36,7 +36,7 @@ const Login = () => {
   }
 
   return (
-    <AuthLayout title="Welcome back" description="Sign in to Hospital Care Admin">
+    <AuthLayout title="Welcome back" description="Sign in to CareNest Admin">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>

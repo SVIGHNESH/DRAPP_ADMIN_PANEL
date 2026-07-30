@@ -50,7 +50,7 @@ const AppShell = ({ children }) => {
           <span className="flex size-5 items-center justify-center rounded-xs bg-accent-brand">
             <Heart size={12} className="text-accent-brand-fg" fill="currentColor" />
           </span>
-          <span className="text-sm font-semibold text-fg">LifeCare</span>
+          <span className="text-sm font-semibold text-fg">CareNest</span>
         </header>
 
         <main className="mx-auto max-w-7xl px-4 py-6 lg:px-8 lg:py-8">{children}</main>

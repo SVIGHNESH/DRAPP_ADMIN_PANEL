@@ -21,7 +21,7 @@ const AuthLayout = ({ title, description, children }) => (
         <span className="flex size-5 items-center justify-center rounded-xs bg-accent-brand">
           <Heart size={12} className="text-accent-brand-fg" fill="currentColor" />
         </span>
-        <span className="text-sm font-semibold text-fg">LifeCare</span>
+        <span className="text-sm font-semibold text-fg">CareNest</span>
       </div>
 
       <div className="rounded-lg border border-border bg-surface p-6">
