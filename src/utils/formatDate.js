@@ -23,6 +23,41 @@ export function toDateParam(isoString) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+// "YYYY-MM-DD" for today shifted by n days, for the date-range query params.
+export function dayOffset(n) {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  return toDateParam(d)
+}
+
+/**
+ * A date-only "YYYY-MM-DD" from the API, rendered as "Tue, 28 Jul".
+ *
+ * Split and rebuilt rather than handed to `new Date(dayStr)`, which reads a
+ * bare ISO date as UTC midnight and so renders the day before anywhere west
+ * of Greenwich.
+ */
+export function formatDay(dayStr) {
+  if (!dayStr) return ""
+  const [y, m, d] = dayStr.split("-").map(Number)
+  if (!y || !m || !d) return dayStr
+  return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  })
+}
+
+// "09:30:00" -> "09:30 AM"
+export function formatTimeOfDay(timeStr) {
+  if (!timeStr) return ""
+  const [h, min] = timeStr.split(":").map(Number)
+  if (Number.isNaN(h)) return timeStr
+  const d = new Date()
+  d.setHours(h, min || 0, 0, 0)
+  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })
+}
+
 export function formatSlotRange(startIso, endIso) {
   const start = formatDate(startIso)
   const end = formatDate(endIso)

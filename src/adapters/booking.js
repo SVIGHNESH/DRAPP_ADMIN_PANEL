@@ -50,6 +50,7 @@ export function toUiBooking(bookingOut, serviceMap) {
     avatar: initials,
     slotStart: bookingOut.slot_start,
     slotEnd: bookingOut.slot_end,
+    createdAt: bookingOut.created_at,
     notes: bookingOut.notes || [],
     assignedNurse: bookingOut.assigned_nurse || null,
     backendStatus: bookingOut.status,

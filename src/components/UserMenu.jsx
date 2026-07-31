@@ -1,5 +1,6 @@
 import React from 'react'
-import { ChevronsUpDown, LogOut, Moon, Sun } from 'lucide-react'
+import { ChevronsUpDown, LogOut, Moon, Sun, UserCog } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../context/useAuth'
 import { useTheme } from '../context/useTheme'
@@ -30,6 +31,7 @@ import {
 const UserMenu = () => {
   const { user, logout } = useAuth()
   const { darkMode, setDarkMode } = useTheme()
+  const navigate = useNavigate()
 
   const name = user?.name || 'Admin'
   const initials = name
@@ -54,6 +56,12 @@ const UserMenu = () => {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" side="top" className="w-[13.5rem]">
+        <DropdownMenuItem onSelect={() => navigate('/profile')}>
+          <UserCog /> Profile
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
         <DropdownMenuLabel>Appearance</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={darkMode ? 'dark' : 'light'}

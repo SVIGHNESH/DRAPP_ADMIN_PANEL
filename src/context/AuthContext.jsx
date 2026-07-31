@@ -57,8 +57,16 @@ export function AuthProvider({ children }) {
     clearSession()
   }
 
+  // Profile edits return the updated UserOut, so the cached copy is replaced
+  // outright rather than refetched.
+  const updateUser = useCallback((updated) => {
+    setUser(updated)
+  }, [])
+
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated, isAdmin, loading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, isAuthenticated, isAdmin, loading, login, logout, updateUser }}
+    >
       {children}
     </AuthContext.Provider>
   )

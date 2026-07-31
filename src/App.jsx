@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Bookings from './pages/Bookings'
 import Nurses from './pages/Nurses'
 import Services from './pages/Services'
+import Profile from './pages/Profile'
 import Help from './pages/Help'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/bookings" element={<Bookings />} />
                 <Route path="/nurses" element={<Nurses />} />
                 <Route path="/services" element={<Services />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/help" element={<Help />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

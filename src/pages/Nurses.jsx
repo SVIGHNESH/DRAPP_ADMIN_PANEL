@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react"
 import {
-  Award, Calendar, KeyRound, Loader2, Mail, MapPin, Pencil, Phone, Plus,
-  Power, PowerOff, User,
+  Award, Calendar, CalendarDays, KeyRound, Loader2, Mail, MapPin, Pencil, Phone,
+  Plus, Power, PowerOff, User,
 } from 'lucide-react'
 import toast from "react-hot-toast"
 
-import { getNurses, createNurse, updateNurse } from '../api/nurses'
+import { getNurses, createNurse, updateNurse, getNurseAvailability } from '../api/nurses'
 import { getBookings } from '../api/bookings'
 import { getErrorMessage } from '../utils/apiError'
+import { dayOffset, formatDay, formatTimeOfDay } from '../utils/formatDate'
 import PageHeader from "../components/PageHeader"
 import ErrorState from "../components/ErrorState"
 import EmptyState from "../components/EmptyState"
@@ -28,6 +29,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 const emptyCreateForm = {
   name: '', email: '', phone: '', password: '', specialization: '', experience_years: '',
 }
+
+const emptyAvailability = { loading: false, days: null, error: null }
+
+// A week back for "did they actually work it", a month forward for planning.
+const defaultRange = () => ({ from: dayOffset(-7), to: dayOffset(30) })
 
 const initialsOf = (name) =>
   name.split(' ').filter(Boolean).map((n) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -53,6 +59,9 @@ const Nurses = () => {
   const [statusFilter, setStatusFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [bookingModalNurse, setBookingModalNurse] = useState(null)
+  const [availabilityNurse, setAvailabilityNurse] = useState(null)
+  const [availability, setAvailability] = useState(emptyAvailability)
+  const [range, setRange] = useState(defaultRange)
   const [showFormModal, setShowFormModal] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [form, setForm] = useState(emptyCreateForm)
@@ -108,6 +117,45 @@ const Nurses = () => {
     ...(bookingsByNurse[`id:${nurse.nurse_id}`] || []),
     ...(bookingsByNurse[`name:${nurse.name.toLowerCase()}`] || []),
   ]
+
+  // What the nurse declared in their own app: which days were leave, which
+  // were worked, and the window on each. Distinct from the availability check
+  // on the bookings page, which only answers "who is free for this one slot".
+  const loadAvailability = useCallback(async (nurseId, from, to) => {
+    setAvailability({ loading: true, days: null, error: null })
+    try {
+      const res = await getNurseAvailability(nurseId, from, to)
+      // The API gives no ordering guarantee; ISO day strings sort lexically.
+      const days = (res.data || []).slice().sort((a, b) => a.day.localeCompare(b.day))
+      setAvailability({ loading: false, days, error: null })
+    } catch (err) {
+      setAvailability({ loading: false, days: null, error: getErrorMessage(err) })
+    }
+  }, [])
+
+  const openAvailability = (nurse) => {
+    setAvailabilityNurse(nurse)
+    loadAvailability(nurse.nurse_id, range.from, range.to)
+  }
+
+  const closeAvailability = () => {
+    setAvailabilityNurse(null)
+    setAvailability(emptyAvailability)
+  }
+
+  // An empty date input clears the bound, which the API accepts as an open
+  // end, so it refetches either way.
+  const handleRangeChange = (key, value) => {
+    const next = { ...range, [key]: value }
+    setRange(next)
+    if (availabilityNurse) {
+      loadAvailability(availabilityNurse.nurse_id, next.from, next.to)
+    }
+  }
+
+  const declaredDays = availability.days || []
+  const leaveCount = declaredDays.filter((d) => d.is_leave).length
+  const workingCount = declaredDays.length - leaveCount
 
   const query = searchQuery.trim().toLowerCase()
   const filtered = nurses.filter((n) => {
@@ -225,7 +273,7 @@ const Nurses = () => {
     <>
       <PageHeader
         title="Nurses"
-        description="Manage nurse accounts, specializations, and availability for assignment."
+        description="Manage nurse accounts and specializations, and review the days each nurse has declared."
         actions={
           <Button onClick={openAdd}>
             <Plus /> Add nurse
@@ -367,21 +415,26 @@ const Nurses = () => {
                         )}
                       </div>
 
+                      {/* The Call button that used to sit here duplicated the
+                          tel: link on the phone number above it, and its slot
+                          was the only place Availability could go without
+                          squeezing three controls into a third-width card. */}
                       <div className="mt-auto flex items-center gap-2 pt-4">
-                        {nurse.phone && (
-                          <Button asChild variant="outline" size="sm" className="flex-1">
-                            <a href={`tel:${nurse.phone}`}>
-                              <Phone /> Call
-                            </a>
-                          </Button>
-                        )}
                         <Button
                           variant="outline"
                           size="sm"
                           className="flex-1"
                           onClick={() => setBookingModalNurse({ ...nurse, bookings: nurseBookings })}
                         >
-                          <Calendar /> View bookings
+                          <Calendar /> Bookings
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => openAvailability(nurse)}
+                        >
+                          <CalendarDays /> Availability
                         </Button>
                       </div>
                     </Card>
@@ -432,6 +485,101 @@ const Nurses = () => {
                 )}
               </div>
             ))}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+
+      {/* Availability */}
+      <Dialog open={!!availabilityNurse} onOpenChange={(open) => !open && closeAvailability()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Availability for {availabilityNurse?.name}</DialogTitle>
+            <DialogDescription>
+              Days this nurse has declared in their own app. Read-only here - leave and working
+              hours are set by the nurse.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogBody className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Field>
+                <FieldLabel htmlFor="avail-from">From</FieldLabel>
+                <Input
+                  id="avail-from"
+                  type="date"
+                  value={range.from}
+                  onChange={(e) => handleRangeChange('from', e.target.value)}
+                  className="tabular-nums"
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="avail-to">To</FieldLabel>
+                <Input
+                  id="avail-to"
+                  type="date"
+                  value={range.to}
+                  onChange={(e) => handleRangeChange('to', e.target.value)}
+                  className="tabular-nums"
+                />
+              </Field>
+            </div>
+
+            {availability.loading ? (
+              <div className="flex items-center gap-2 py-6 text-xs text-fg-muted">
+                <Loader2 size={13} className="animate-spin" />
+                Loading declared days...
+              </div>
+            ) : availability.error ? (
+              <ErrorState
+                message={availability.error}
+                onRetry={() =>
+                  loadAvailability(availabilityNurse.nurse_id, range.from, range.to)
+                }
+              />
+            ) : declaredDays.length === 0 ? (
+              <p className="py-6 text-center text-sm text-fg-muted">
+                Nothing declared for this range. A nurse with no declared days is not
+                automatically unavailable - the booking assignment check is what decides that.
+              </p>
+            ) : (
+              <>
+                <p className="text-xs text-fg-muted tabular-nums">
+                  {workingCount} working day{workingCount !== 1 ? 's' : ''} &middot; {leaveCount} on
+                  leave
+                </p>
+
+                <div className="flex flex-col gap-2">
+                  {declaredDays.map((d) => (
+                    <div
+                      key={d.availability_id}
+                      className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface-sunken p-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm text-fg tabular-nums">{formatDay(d.day)}</p>
+                        {d.note && (
+                          <p className="mt-0.5 truncate text-xs text-fg-muted">{d.note}</p>
+                        )}
+                      </div>
+                      <div className="shrink-0">
+                        {d.is_leave ? (
+                          <StatusBadge tone="warning" className="bg-surface">
+                            On leave
+                          </StatusBadge>
+                        ) : d.start_time && d.end_time ? (
+                          <span className="text-xs text-fg-secondary tabular-nums">
+                            {formatTimeOfDay(d.start_time)} - {formatTimeOfDay(d.end_time)}
+                          </span>
+                        ) : (
+                          <StatusBadge tone="success" className="bg-surface">
+                            Available
+                          </StatusBadge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </DialogBody>
         </DialogContent>
       </Dialog>

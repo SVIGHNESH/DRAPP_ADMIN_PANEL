@@ -14,3 +14,8 @@ export const resetPassword = (token, newPassword) =>
 
 export const getMe = () =>
   api.get("/users/me")
+
+// Only name and phone are editable; email is the login and role is set
+// server-side, so neither is accepted here.
+export const updateMe = (data) =>
+  api.patch("/users/me", data)

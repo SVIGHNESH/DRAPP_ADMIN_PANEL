@@ -13,7 +13,7 @@ import { getServices } from '../api/services'
 import { getNurses, getAvailableNurses } from '../api/nurses'
 import { toUiBooking, buildServiceMap } from '../adapters/booking'
 import { getErrorMessage } from '../utils/apiError'
-import { toDateParam } from '../utils/formatDate'
+import { formatDate, toDateParam } from '../utils/formatDate'
 import PageHeader from "../components/PageHeader"
 import ErrorState from "../components/ErrorState"
 import EmptyState from "../components/EmptyState"
@@ -24,8 +24,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-  focusContent,
+  Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader,
+  DialogTitle, focusContent,
 } from "@/components/ui/dialog"
 import { Field, FieldHint, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -38,6 +38,12 @@ import { Textarea } from "@/components/ui/textarea"
 const emptyForm = { service_id: '', slot_start: '', slot_end: '', custom_address: '', notes: '' }
 const emptyAvailability = { loading: false, list: null, error: null, date: null }
 const emptyConfirmForm = { nurse_id: null, nurse_name: '', nurse_contact: '' }
+
+// Newest first. GET /bookings returns no ordering guarantee and takes no sort
+// param, so the queue is ordered here: the booking that just came in is the
+// one an admin is looking for, and it was previously wherever the backend
+// happened to put it.
+const byNewest = (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
 
 // The backend allows confirming from pending_payment, requested and confirmed.
 const canConfirm = (status) =>
@@ -85,7 +91,7 @@ const Bookings = () => {
       setServices(svcData)
       const sm = buildServiceMap(svcData)
       setServiceMap(sm)
-      const mapped = (bookRes.data || []).map((b) => toUiBooking(b, sm))
+      const mapped = (bookRes.data || []).map((b) => toUiBooking(b, sm)).sort(byNewest)
       setBookings(mapped)
 
       // Roster is only needed as a fallback for the assign-nurse picker, so a
@@ -405,6 +411,11 @@ const Bookings = () => {
         <DialogContent onOpenAutoFocus={focusContent}>
           <DialogHeader>
             <DialogTitle className="tabular-nums">Booking #{detail?.bookingId}</DialogTitle>
+            {detail?.createdAt && (
+              <DialogDescription className="tabular-nums">
+                Booked on {formatDate(detail.createdAt).date} at {formatDate(detail.createdAt).time}
+              </DialogDescription>
+            )}
           </DialogHeader>
 
           {detail && (

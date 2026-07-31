@@ -9,6 +9,11 @@ export const sidebarReports = [];
 
 export const sidebarSettings = [
   {
+    name: "Profile",
+    path: "/profile",
+    icon: "UserCog",
+  },
+  {
     name: "Help & Supports",
     path: "/help",
     icon: "HelpCircle",

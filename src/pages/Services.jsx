@@ -124,10 +124,19 @@ const Services = () => {
             <>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {paginated.map((service) => (
-                  <Card key={service.service_id} className="flex flex-col p-4">
+                  <Card
+                    key={service.service_id}
+                    className={`flex flex-col p-4 ${service.active ? '' : 'opacity-70'}`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <h2 className="text-sm font-semibold text-fg">{service.name}</h2>
-                      <StatusBadge tone="success">Active</StatusBadge>
+                      {/* Read from the row, not hardcoded. The listing is
+                          expected to return active services only, so this
+                          should always say Active - but a badge that cannot
+                          say anything else is decoration, not a status. */}
+                      <StatusBadge tone={service.active ? 'success' : 'neutral'}>
+                        {service.active ? 'Active' : 'Inactive'}
+                      </StatusBadge>
                     </div>
 
                     {service.description && (

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  Heart, LayoutDashboard, Calendar, Stethoscope, Activity, HelpCircle,
+  Heart, LayoutDashboard, Calendar, Stethoscope, Activity, HelpCircle, UserCog,
 } from 'lucide-react'
 
 import { sidebarLinks, sidebarSettings } from '../data/mockData'
@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 
 const iconMap = {
   LayoutDashboard, Calendar, Stethoscope,
-  Activity, HelpCircle,
+  Activity, HelpCircle, UserCog,
 }
 
 /**
