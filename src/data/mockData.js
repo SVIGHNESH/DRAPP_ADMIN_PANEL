@@ -7,12 +7,9 @@ export const sidebarLinks = [
 
 export const sidebarReports = [];
 
+// Profile is deliberately not here. It lives only in the UserMenu at the
+// bottom of the sidebar, where the account it edits is already named.
 export const sidebarSettings = [
-  {
-    name: "Profile",
-    path: "/profile",
-    icon: "UserCog",
-  },
   {
     name: "Help & Supports",
     path: "/help",
